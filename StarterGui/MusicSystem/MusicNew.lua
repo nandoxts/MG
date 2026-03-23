@@ -368,8 +368,8 @@ do
 			ColorSequenceKeypoint.new(1, THEME.bg),
 		}, Rotation = 90, Parent = topBar,
 	})
-	makeFrame({dim = UDim2.new(1, 0, 0, 1), pos = UDim2.new(0, 0, 1, -1), bg = THEME.stroke, bgT = 0.5, z = 121, parent = topBar})
-	makeLabel({text = "MUSICA", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(0, 200, 1, 0), pos = UDim2.new(0, 20, 0, 0), color = THEME.text, z = 122, parent = topBar})
+	makeFrame({dim = UDim2.new(1, 0, 0, 1), pos = UDim2.new(0, 0, 1, -1), bg = THEME.accent, bgT = 0.75, z = 121, parent = topBar})
+	makeLabel({text = "MUSICA", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(0, 200, 1, 0), pos = UDim2.new(0, 20, 0, 0), color = THEME.accent, z = 122, parent = topBar})
 
 	local tabContainer = makeFrame({dim = UDim2.new(0, 220, 0, 34), pos = UDim2.new(0.5, -110, 0.5, -17), bg = THEME.card, bgT = 0, z = 122, clip = true, name = "TabContainer", parent = topBar})
 	Modules.UI.rounded(tabContainer, 17)
@@ -455,14 +455,17 @@ do
 		CanvasSize = UDim2.new(0, 0, 0, 0), ClipsDescendants = true, ZIndex = 102,
 		Parent = homeLeft,
 	})
-	makeLabel({text = "SONANDO", font = Enum.Font.GothamBlack, size = 14, dim = UDim2.new(1, -24, 0, 20), pos = UDim2.new(0, 16, 0, 12), color = THEME.dim, z = 102, parent = nowPlayingScroll})
+	makeLabel({text = "SONANDO", font = Enum.Font.GothamBlack, size = 14, dim = UDim2.new(1, -24, 0, 20), pos = UDim2.new(0, 16, 0, 12), color = THEME.accent, z = 102, parent = nowPlayingScroll})
 
 	-- Album Cover
 	local coverContainer = makeFrame({dim = UDim2.new(1, 0, 0, LAY.COVER_SIZE + 16), pos = UDim2.new(0, 0, 0, 38), z = 102, parent = nowPlayingScroll})
+	local _glowS = LAY.COVER_SIZE + 40
+	local coverGlow = makeFrame({dim = UDim2.new(0, _glowS, 0, _glowS), pos = UDim2.new(0.5, -_glowS/2, 0, 4 - 20), bg = THEME.accent, bgT = 0.85, z = 102, name = "CoverGlow", parent = coverContainer})
+	Modules.UI.rounded(coverGlow, 20)
 	E.miniCover = makeImage({dim = UDim2.new(0, LAY.COVER_SIZE, 0, LAY.COVER_SIZE), pos = UDim2.new(0.5, -LAY.COVER_SIZE/2, 0, 4), z = 103, name = "MiniCover", parent = coverContainer})
 	E.miniCover.ClipsDescendants = true
-	Modules.UI.rounded(E.miniCover, 10)
-	make("UIStroke", {Color = THEME.accent, Thickness = 1.5, Transparency = 0.4, Parent = E.miniCover})
+	Modules.UI.rounded(E.miniCover, 12)
+	make("UIStroke", {Color = THEME.accent, Thickness = 2, Transparency = 0.3, Parent = E.miniCover})
 
 	-- Song Info
 	local infoY = 38 + LAY.COVER_SIZE + 20
@@ -575,7 +578,7 @@ E.libraryContent.Visible = false
 do
 	local libLeft = makeFrame({dim = UDim2.new(LAY.LIB_LEFT_W, 0, 1, 0), bg = THEME.bg, bgT = THEME.lightAlpha, z = 100, name = "LibLeft", parent = E.libraryContent})
 	makeFrame({dim = UDim2.new(0, 1, 1, -20), pos = UDim2.new(1, 0, 0, 10), bg = THEME.stroke, bgT = 0.5, z = 101, parent = libLeft})
-	makeLabel({text = "LISTAS", font = Enum.Font.GothamBlack, size = 16, dim = UDim2.new(1, -16, 0, LAY.COL_HEADER_H), pos = UDim2.new(0, 12, 0, 0), color = THEME.text, z = 102, parent = libLeft})
+	makeLabel({text = "LISTAS", font = Enum.Font.GothamBlack, size = 16, dim = UDim2.new(1, -16, 0, LAY.COL_HEADER_H), pos = UDim2.new(0, 12, 0, 0), color = THEME.accent, z = 102, parent = libLeft})
 
 	E.djsScroll = make("ScrollingFrame", {
 		Size = UDim2.new(1, -8, 1, -LAY.COL_HEADER_H - 8), Position = UDim2.new(0, 4, 0, LAY.COL_HEADER_H + 4),
