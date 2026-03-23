@@ -186,10 +186,11 @@ local CFG = {
 }
 
 local ICONS = {
-	PLAY_ADD = "rbxassetid://84692791859484",
-	CHECK    = "rbxassetid://102926522001210",
-	DELETE   = "rbxassetid://94904012825024",
-	LOADING  = "rbxassetid://122161736287488",
+	PLAY_ADD = Modules.UI.ICONS.PLAY_ADD,
+	CHECK    = Modules.UI.ICONS.CHECK,
+	DELETE   = Modules.UI.ICONS.DELETE,
+	LOADING  = Modules.UI.ICONS.LOADING,
+	SKIP     = Modules.UI.ICONS.SKIP,
 	VOL_DOWN = "rbxassetid://118993192034241",
 	VOL_UP   = "rbxassetid://114456072508401",
 }
@@ -368,7 +369,7 @@ do
 		}, Rotation = 90, Parent = topBar,
 	})
 	makeFrame({dim = UDim2.new(1, 0, 0, 1), pos = UDim2.new(0, 0, 1, -1), bg = THEME.stroke, bgT = 0.5, z = 121, parent = topBar})
-	makeLabel({text = "MUSIC SYSTEM", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(0, 200, 1, 0), pos = UDim2.new(0, 20, 0, 0), color = THEME.text, z = 122, parent = topBar})
+	makeLabel({text = "MUSICA", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(0, 200, 1, 0), pos = UDim2.new(0, 20, 0, 0), color = THEME.text, z = 122, parent = topBar})
 
 	local tabContainer = makeFrame({dim = UDim2.new(0, 220, 0, 34), pos = UDim2.new(0.5, -110, 0.5, -17), bg = THEME.card, bgT = 0, z = 122, clip = true, name = "TabContainer", parent = topBar})
 	Modules.UI.rounded(tabContainer, 17)
@@ -385,14 +386,26 @@ do
 	})
 	Modules.UI.rounded(E.tabIndicator, 14)
 
-	E.tabHome = makeBtn({dim = UDim2.new(0.5, 0, 1, 0), pos = UDim2.new(0, 0, 0, 0), bg = THEME.card, text = "Home", textSize = 15, font = Enum.Font.GothamBold, z = 124, name = "TabHome", parent = tabContainer})
+	E.tabHome = makeBtn({dim = UDim2.new(0.5, 0, 1, 0), pos = UDim2.new(0, 0, 0, 0), bg = THEME.card, text = "Inicio", textSize = 15, font = Enum.Font.GothamBold, z = 124, name = "TabHome", parent = tabContainer})
 	E.tabHome.BackgroundTransparency = 1
 
-	E.tabLibrary = makeBtn({dim = UDim2.new(0.5, 0, 1, 0), pos = UDim2.new(0.5, 0, 0, 0), bg = THEME.card, text = "Library", textSize = 15, font = Enum.Font.GothamBold, textColor = THEME.muted, z = 124, name = "TabLibrary", parent = tabContainer})
+	E.tabLibrary = makeBtn({dim = UDim2.new(0.5, 0, 1, 0), pos = UDim2.new(0.5, 0, 0, 0), bg = THEME.card, text = "Biblioteca", textSize = 15, font = Enum.Font.GothamBold, textColor = THEME.muted, z = 124, name = "TabLibrary", parent = tabContainer})
 	E.tabLibrary.BackgroundTransparency = 1
 
-	local closeBtn = makeBtn({dim = UDim2.new(0, 34, 0, 34), pos = UDim2.new(1, -52, 0.5, -17), bg = THEME.elevated, text = "X", textSize = 16, font = Enum.Font.GothamBold, z = 123, round = 8, parent = topBar})
-	addHover(closeBtn, THEME.danger, THEME.elevated)
+	local closeBtn, _ = Modules.UI.outlinedCircleBtn(topBar, {
+		size = 32, icon = "", theme = THEME, zIndex = 123,
+		position = UDim2.new(1, -48, 0.5, -16), name = "CloseBtn",
+	})
+	closeBtn.Text = "×"; closeBtn.TextSize = 20; closeBtn.Font = Enum.Font.GothamBold; closeBtn.TextColor3 = THEME.dim
+	local closeBtnStroke = closeBtn:FindFirstChildWhichIsA("UIStroke")
+	closeBtn.MouseEnter:Connect(function()
+		tw(closeBtn, 0.15, {TextColor3 = THEME.danger})
+		if closeBtnStroke then tw(closeBtnStroke, 0.15, {Color = THEME.danger}) end
+	end)
+	closeBtn.MouseLeave:Connect(function()
+		tw(closeBtn, 0.15, {TextColor3 = THEME.dim})
+		if closeBtnStroke then tw(closeBtnStroke, 0.15, {Color = THEME.stroke}) end
+	end)
 	closeBtn.MouseButton1Click:Connect(function() Modules.GlobalModalManager:closeModal("Music") end)
 end
 
@@ -442,7 +455,7 @@ do
 		CanvasSize = UDim2.new(0, 0, 0, 0), ClipsDescendants = true, ZIndex = 102,
 		Parent = homeLeft,
 	})
-	makeLabel({text = "NOW PLAYING", font = Enum.Font.GothamBlack, size = 14, dim = UDim2.new(1, -24, 0, 20), pos = UDim2.new(0, 16, 0, 12), color = THEME.dim, z = 102, parent = nowPlayingScroll})
+	makeLabel({text = "SONANDO", font = Enum.Font.GothamBlack, size = 14, dim = UDim2.new(1, -24, 0, 20), pos = UDim2.new(0, 16, 0, 12), color = THEME.dim, z = 102, parent = nowPlayingScroll})
 
 	-- Album Cover
 	local coverContainer = makeFrame({dim = UDim2.new(1, 0, 0, LAY.COVER_SIZE + 16), pos = UDim2.new(0, 0, 0, 38), z = 102, parent = nowPlayingScroll})
@@ -453,7 +466,7 @@ do
 
 	-- Song Info
 	local infoY = 38 + LAY.COVER_SIZE + 20
-	E.songTitle = makeLabel({dim = UDim2.new(1, -32, 0, 24), pos = UDim2.new(0, 16, 0, infoY), text = "No song playing", font = Enum.Font.GothamBold, size = mob and 16 or 18, alignX = Enum.TextXAlignment.Center, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "SongTitle", parent = nowPlayingScroll})
+	E.songTitle = makeLabel({dim = UDim2.new(1, -32, 0, 24), pos = UDim2.new(0, 16, 0, infoY), text = "Sin cancion", font = Enum.Font.GothamBold, size = mob and 16 or 18, alignX = Enum.TextXAlignment.Center, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "SongTitle", parent = nowPlayingScroll})
 	E.headerDJName = makeLabel({dim = UDim2.new(1, -32, 0, 18), pos = UDim2.new(0, 16, 0, infoY + 28), color = THEME.dim, font = Enum.Font.GothamBold, size = mob and 12 or 14, alignX = Enum.TextXAlignment.Center, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "DJName", parent = nowPlayingScroll})
 
 	-- Visualizer
@@ -488,7 +501,7 @@ do
 	E.volSliderFill = makeFrame({dim = UDim2.new(1, 0, 1, 0), bg = THEME.accent, bgT = 0, z = 105, name = "VolFill", parent = E.volSliderTrack})
 	Modules.UI.rounded(E.volSliderFill, 5)
 
-	E.volSliderDot = makeFrame({dim = UDim2.new(0, 16, 0, 16), pos = UDim2.new(1, -8, 0.5, -8), bg = Color3.new(1, 1, 1), bgT = 0, z = 106, name = "VolDot", parent = E.volSliderFill})
+	E.volSliderDot = makeFrame({dim = UDim2.new(0, 16, 0, 16), pos = UDim2.new(1, -8, 0.5, -8), bg = THEME.text, bgT = 0, z = 106, name = "VolDot", parent = E.volSliderFill})
 	Modules.UI.rounded(E.volSliderDot, 8)
 
 	E.volLabelText = makeLabel({dim = UDim2.new(0, 50, 1, 0), pos = UDim2.new(1, -58, 0, 0), text = "100%", color = THEME.text, font = Enum.Font.GothamBold, size = 14, alignX = Enum.TextXAlignment.Right, z = 104, parent = volFrame})
@@ -499,12 +512,41 @@ do
 	E.volSliderBtn = makeBtn({dim = UDim2.new(1, -120, 0, 24), pos = UDim2.new(0, 40, 0.5, -12), z = 108, name = "VolSliderBtn", parent = volFrame})
 	E.volSliderBtn.BackgroundTransparency = 1
 
-	-- Skip Button
+	-- Controls Row (Skip + Add by ID)
 	local skipY = volY + 48
-	E.skipB = makeBtn({dim = UDim2.new(1, -32, 0, 42), pos = UDim2.new(0, 16, 0, skipY), bg = THEME.accent, text = "Skip", textSize = 15, font = Enum.Font.GothamBold, z = 103, round = 10, name = "SkipBtn", parent = nowPlayingScroll})
+	local controlsRow = makeFrame({dim = UDim2.new(1, -32, 0, 56), pos = UDim2.new(0, 16, 0, skipY), z = 102, name = "ControlsRow", parent = nowPlayingScroll})
+
+	-- Skip (left)
+	E.skipB, _ = Modules.UI.outlinedCircleBtn(controlsRow, {
+		size = 48, icon = ICONS.SKIP, theme = THEME, zIndex = 103,
+		position = UDim2.new(0, 0, 0.5, -24), name = "SkipBtn",
+	})
+	local skipStroke = E.skipB:FindFirstChildWhichIsA("UIStroke")
+	E.skipB.MouseEnter:Connect(function()
+		if skipStroke then tw(skipStroke, 0.15, {Color = THEME.accent}) end
+	end)
+	E.skipB.MouseLeave:Connect(function()
+		if skipStroke then tw(skipStroke, 0.15, {Color = THEME.stroke}) end
+	end)
+
+	-- Add by ID (right of skip)
+	local addIdInputFrame = makeFrame({dim = UDim2.new(1, -62, 0, 40), pos = UDim2.new(0, 56, 0.5, -20), bg = THEME.elevated, bgT = 0, z = 103, clip = true, name = "AddByIdInput", parent = controlsRow})
+	Modules.UI.rounded(addIdInputFrame, 10)
+	E.qiStroke = Modules.UI.stroked(addIdInputFrame, 0.4)
+	E.quickInput = make("TextBox", {Size = UDim2.new(1, -46, 1, 0), Position = UDim2.new(0, 12, 0, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = "ID de audio...", TextColor3 = THEME.text, PlaceholderColor3 = THEME.dim, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, ZIndex = 104, Parent = addIdInputFrame})
+	E.quickInput:GetPropertyChangedSignal("Text"):Connect(function()
+		if #E.quickInput.Text > 19 then E.quickInput.Text = string.sub(E.quickInput.Text, 1, 19) end
+	end)
+	E.quickAddBtn, _ = Modules.UI.outlinedCircleBtn(addIdInputFrame, {
+		size = 32, icon = ICONS.PLAY_ADD, theme = THEME, zIndex = 105,
+		position = UDim2.new(1, -36, 0.5, -16), name = "QuickAddBtn",
+	})
+	E.qaStroke = E.quickAddBtn:FindFirstChildWhichIsA("UIStroke")
+	E.quickAddBtnImg = E.quickAddBtn:FindFirstChild("IconImage")
+	E.quickAddBtnLoading = makeImage({dim = UDim2.new(0.55, 0, 0.55, 0), pos = UDim2.new(0.225, 0, 0.225, 0), image = ICONS.LOADING, imageColor = THEME.dim, z = 107, visible = false, name = "LoadingIcon", parent = E.quickAddBtn})
 
 	-- CanvasSize = todo el contenido + padding inferior
-	nowPlayingScroll.CanvasSize = UDim2.new(0, 0, 0, skipY + 42 + 24)
+	nowPlayingScroll.CanvasSize = UDim2.new(0, 0, 0, skipY + 56 + 24)
 	-- offset negativo para que quede DENTRO de homeLeft (que tiene ClipsDescendants=true)
 	-- width=4, offset=-8 → el thumb queda en [parentW-8 .. parentW-4], 4px adentro del borde
 	Modules.ModernScrollbar.setup(nowPlayingScroll, homeLeft, THEME, {transparency = 0, zIndex = 120, offset = -8})
@@ -514,10 +556,10 @@ end
 do
 	local homeRight = makeFrame({dim = UDim2.new(LAY.HOME_RIGHT_W, 0, 1, 0), pos = UDim2.new(LAY.HOME_LEFT_W, 0, 0, 0), z = 100, name = "HomeRight", parent = E.homeContent})
 	local queueHeader = makeFrame({dim = UDim2.new(1, 0, 0, LAY.COL_HEADER_H), z = 101, parent = homeRight})
-	makeLabel({text = "QUEUE", font = Enum.Font.GothamBlack, size = 20, dim = UDim2.new(1, -16, 1, 0), pos = UDim2.new(0, 12, 0, 0), color = THEME.text, z = 102, parent = queueHeader})
+	makeLabel({text = "COLA", font = Enum.Font.GothamBlack, size = 20, dim = UDim2.new(1, -16, 1, 0), pos = UDim2.new(0, 12, 0, 0), color = THEME.text, z = 102, parent = queueHeader})
 
 	if isAdmin then
-		E.clearB = makeBtn({dim = UDim2.new(0, 52, 0, 24), pos = UDim2.new(1, -60, 0.5, -12), bg = THEME.warn, text = "CLEAR", textSize = 11, z = 103, round = 6, parent = queueHeader})
+		E.clearB = makeBtn({dim = UDim2.new(0, 60, 0, 24), pos = UDim2.new(1, -68, 0.5, -12), bg = THEME.warn, text = "LIMPIAR", textSize = 10, z = 103, round = 6, parent = queueHeader})
 	end
 
 	E.queueScroll = makeScrollColumn(homeRight, LAY.COL_HEADER_H + 4, {sizeXOff = -12, posX = 6, bottomOff = 8, padding = 4, paddingTop = 4, gap = 4}, THEME)
@@ -533,10 +575,10 @@ E.libraryContent.Visible = false
 do
 	local libLeft = makeFrame({dim = UDim2.new(LAY.LIB_LEFT_W, 0, 1, 0), bg = THEME.bg, bgT = THEME.lightAlpha, z = 100, name = "LibLeft", parent = E.libraryContent})
 	makeFrame({dim = UDim2.new(0, 1, 1, -20), pos = UDim2.new(1, 0, 0, 10), bg = THEME.stroke, bgT = 0.5, z = 101, parent = libLeft})
-	makeLabel({text = "COLLECTIONS", font = Enum.Font.GothamBlack, size = 16, dim = UDim2.new(1, -16, 0, LAY.COL_HEADER_H), pos = UDim2.new(0, 12, 0, 0), color = THEME.text, z = 102, parent = libLeft})
+	makeLabel({text = "LISTAS", font = Enum.Font.GothamBlack, size = 16, dim = UDim2.new(1, -16, 0, LAY.COL_HEADER_H), pos = UDim2.new(0, 12, 0, 0), color = THEME.text, z = 102, parent = libLeft})
 
 	E.djsScroll = make("ScrollingFrame", {
-		Size = UDim2.new(1, -8, 1, -LAY.COL_HEADER_H - 96), Position = UDim2.new(0, 4, 0, LAY.COL_HEADER_H + 4),
+		Size = UDim2.new(1, -8, 1, -LAY.COL_HEADER_H - 8), Position = UDim2.new(0, 4, 0, LAY.COL_HEADER_H + 4),
 		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, ScrollBarImageTransparency = 1,
 		CanvasSize = UDim2.new(0, 0, 0, 0), ClipsDescendants = true, ZIndex = 101, Parent = libLeft,
 	})
@@ -547,24 +589,6 @@ do
 	djsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		E.djsScroll.CanvasSize = UDim2.new(0, 0, 0, djsLayout.AbsoluteContentSize.Y + 12)
 	end)
-
-	-- ADD BY ID
-	local addByIdFrame = makeFrame({dim = UDim2.new(1, -16, 0, 84), pos = UDim2.new(0, 8, 1, -90), bg = THEME.card, bgT = THEME.frameAlpha or 0.3, z = 102, name = "AddById", parent = libLeft})
-	Modules.UI.rounded(addByIdFrame, 8)
-	makeLabel({text = "ADD BY ID", font = Enum.Font.GothamBlack, size = 12, dim = UDim2.new(1, -12, 0, 18), pos = UDim2.new(0, 8, 0, 6), color = THEME.dim, z = 103, parent = addByIdFrame})
-
-	local addIdInputFrame = makeFrame({dim = UDim2.new(1, -12, 0, 42), pos = UDim2.new(0, 6, 0, 30), bg = THEME.elevated, bgT = 0, z = 103, clip = true, parent = addByIdFrame})
-	Modules.UI.rounded(addIdInputFrame, 6)
-
-	E.quickInput = make("TextBox", {Size = UDim2.new(1, -50, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = "Enter Audio ID...", TextColor3 = THEME.text, PlaceholderColor3 = THEME.dim, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, ZIndex = 104, Parent = addIdInputFrame})
-	E.quickInput:GetPropertyChangedSignal("Text"):Connect(function()
-		if #E.quickInput.Text > 19 then E.quickInput.Text = string.sub(E.quickInput.Text, 1, 19) end
-	end)
-
-	E.quickAddBtn = makeBtn({dim = UDim2.new(0, 34, 0, 32), pos = UDim2.new(1, -38, 0.5, -16), bg = THEME.accent, z = 105, round = 8, parent = addIdInputFrame})
-	E.quickAddBtnImg = makeImage({dim = UDim2.new(0.65, 0, 0.65, 0), pos = UDim2.new(0.175, 0, 0.175, 0), image = ICONS.PLAY_ADD, z = 106, parent = E.quickAddBtn})
-	E.quickAddBtnLoading = makeImage({dim = UDim2.new(0.65, 0, 0.65, 0), pos = UDim2.new(0.175, 0, 0.175, 0), image = ICONS.LOADING, z = 107, visible = false, parent = E.quickAddBtn})
-	E.qiStroke = Modules.UI.stroked(addIdInputFrame, 0.4)
 end
 
 -- ═══ LIBRARY RIGHT: Songs ═══
@@ -572,11 +596,11 @@ do
 	local libRight = makeFrame({dim = UDim2.new(LAY.LIB_RIGHT_W, 0, 1, 0), pos = UDim2.new(LAY.LIB_LEFT_W, 0, 0, 0), z = 100, clip = true, name = "LibRight", parent = E.libraryContent})
 	local songsHeader = makeFrame({dim = UDim2.new(1, -20, 0, 82), pos = UDim2.new(0, 10, 0, 4), z = 101, clip = true, parent = libRight})
 
-	E.songsTitle = makeLabel({text = "ALL TRACKS", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(1, -70, 0, 28), truncate = Enum.TextTruncate.AtEnd, alignX = Enum.TextXAlignment.Left, z = 102, name = "SongsTitle", parent = songsHeader})
+	E.songsTitle = makeLabel({text = "CANCIONES", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(1, -70, 0, 28), truncate = Enum.TextTruncate.AtEnd, alignX = Enum.TextXAlignment.Left, z = 102, name = "SongsTitle", parent = songsHeader})
 	E.songCountLabel = makeLabel({dim = UDim2.new(0, 65, 0, 28), pos = UDim2.new(1, -65, 0, 0), color = THEME.accent, font = Enum.Font.GothamBold, size = 12, alignX = Enum.TextXAlignment.Right, z = 102, visible = false, parent = songsHeader})
 
 	local searchContainer
-	searchContainer, E.searchInput = Modules.SearchModern.new(songsHeader, {placeholder = "Search tracks...", size = UDim2.new(1, 0, 0, 36), bg = THEME.card, corner = 10, z = 102, inputName = "SearchInput"})
+	searchContainer, E.searchInput = Modules.SearchModern.new(songsHeader, {placeholder = "Buscar...", size = UDim2.new(1, 0, 0, 36), bg = THEME.card, corner = 10, z = 102, inputName = "SearchInput"})
 	searchContainer.Position = UDim2.new(0, 0, 0, 38)
 	searchContainer.Size = UDim2.new(1, -2, 0, 34)
 	if E.searchInput then
@@ -594,7 +618,7 @@ do
 
 	E.songsContainer = makeFrame({name = "SongsContainer", dim = UDim2.new(1, 0, 0, 0), z = 101, parent = E.songsScroll})
 	E.loadingIndicator = makeLabel({dim = UDim2.new(1, 0, 0, 40), text = "Cargando...", color = THEME.muted, size = 15, z = 102, visible = false, parent = E.songsScroll})
-	E.songsPlaceholder = makeLabel({dim = UDim2.new(1, -40, 0, 80), pos = UDim2.new(0, 20, 0.4, 0), text = "Select a collection\nto browse tracks", color = THEME.muted, size = 16, wrap = true, z = 102, alignX = Enum.TextXAlignment.Center, name = "Placeholder", parent = libRight})
+	E.songsPlaceholder = makeLabel({dim = UDim2.new(1, -40, 0, 80), pos = UDim2.new(0, 20, 0.4, 0), text = "Elige una lista\npara ver canciones", color = THEME.muted, size = 16, wrap = true, z = 102, alignX = Enum.TextXAlignment.Center, name = "Placeholder", parent = libRight})
 end
 
 -- ════════════════════════════════════════════════════════════════
@@ -605,12 +629,12 @@ local function switchTab(tab)
 	if tab == "Home" then
 		E.homeContent.Visible = true; E.libraryContent.Visible = false
 		if E.tabIndicator then tw(E.tabIndicator, 0.22, {Position = UDim2.new(0, 2, 0, 2)}) end
-		E.tabHome.TextColor3 = Color3.new(1, 1, 1)
+		E.tabHome.TextColor3 = THEME.text
 		E.tabLibrary.TextColor3 = THEME.dim
 	else
 		E.homeContent.Visible = false; E.libraryContent.Visible = true
 		if E.tabIndicator then tw(E.tabIndicator, 0.22, {Position = UDim2.new(0.5, 2, 0, 2)}) end
-		E.tabLibrary.TextColor3 = Color3.new(1, 1, 1)
+		E.tabLibrary.TextColor3 = THEME.text
 		E.tabHome.TextColor3 = THEME.dim
 	end
 end
@@ -630,13 +654,14 @@ local function setAddButtonState(state, customMessage)
 		loading   = {adding = true,  bg = THEME.elevated, stroke = THEME.accent, auto = false},
 		success   = {adding = false, bg = THEME.success, stroke = THEME.success, clear = true, delay = 2},
 		error     = {adding = false, bg = THEME.danger, stroke = THEME.danger, clear = true, placeholder = customMessage, delay = 3},
-		duplicate = {adding = false, bg = THEME.warn, stroke = THEME.warn, clear = true, placeholder = customMessage or "Already in queue", delay = 3},
-		default   = {adding = false, bg = THEME.accent, stroke = THEME.stroke, auto = true, placeholder = "Enter Audio ID..."},
+		duplicate = {adding = false, bg = THEME.warn, stroke = THEME.warn, clear = true, placeholder = customMessage or "Ya en cola", delay = 3},
+		default   = {adding = false, bg = THEME.accent, stroke = THEME.stroke, auto = true, placeholder = "ID de audio..."},
 	}
 
 	local s = states[state] or states.default
 	S.isAddingToQueue = s.adding
-	E.quickAddBtn.BackgroundColor3 = s.bg; E.qiStroke.Color = s.stroke
+	E.qiStroke.Color = s.stroke
+	if E.qaStroke then E.qaStroke.Color = s.stroke end
 	E.quickAddBtn.AutoButtonColor = s.auto ~= false
 
 	if state == "loading" then
@@ -661,8 +686,8 @@ E.quickAddBtn.MouseButton1Click:Connect(function()
 	if S.isAddingToQueue then return end
 	local aid = E.quickInput.Text:gsub("%s+", "")
 	if not isValidAudioId(aid) then
-		Modules.Notify:Warning("ID Inválido", "Enter a valid ID (6-19 digits)", 3)
-		setAddButtonState("error", "Invalid Audio ID"); return
+		Modules.Notify:Warning("ID no valido", "Ingresa un ID valido (6-19 digitos)", 3)
+		setAddButtonState("error", "ID no valido"); return
 	end
 	setAddButtonState("loading")
 	if R.Add then R.Add:FireServer(tonumber(aid)) end
@@ -680,12 +705,13 @@ local function updatePendingCard(response, songId)
 				if loadingIcon then loadingIcon.Visible = false end
 				local icon = addBtn:FindFirstChild("IconImage")
 				if icon then icon.Visible = true end
+				local abStroke = addBtn:FindFirstChildWhichIsA("UIStroke")
 				if response.success or response.code == ResponseCodes.ERROR_DUPLICATE then
-					if icon then icon.Image = ICONS.CHECK; icon.ImageColor3 = Color3.new(1, 1, 1) end
-					addBtn.BackgroundColor3 = THEME.success; addBtn.AutoButtonColor = false
+					if icon then icon.Image = ICONS.CHECK; icon.ImageColor3 = THEME.success end
+					if abStroke then abStroke.Color = THEME.success end
 				else
-					if icon then icon.Image = ICONS.PLAY_ADD; icon.ImageColor3 = THEME.text end
-					addBtn.BackgroundColor3 = THEME.card; addBtn.AutoButtonColor = true
+					if icon then icon.Image = ICONS.PLAY_ADD; icon.ImageColor3 = THEME.dim end
+					if abStroke then abStroke.Color = THEME.stroke end
 				end
 				break
 			end
@@ -762,7 +788,7 @@ end
 updateVolume(S.currentVolume)
 
 local function handleMuteCheck()
-	if isMusicMuted() then Modules.Notify:Info("Music Muted", "Unmute from the topbar to change volume", 2); return true end
+	if isMusicMuted() then Modules.Notify:Info("Silenciado", "Activa el sonido para cambiar el volumen", 2); return true end
 	return false
 end
 
@@ -861,11 +887,11 @@ do
 	E.skipB.MouseButton1Click:Connect(function()
 		local elapsed = tick() - S.lastSkipTime
 		if not isAdmin and elapsed < skipCooldown then
-			Modules.Notify:Info("Cooldown", "Wait " .. math.ceil(skipCooldown - elapsed) .. " seconds"); return
+			Modules.Notify:Info("Espera", "Espera " .. math.ceil(skipCooldown - elapsed) .. " seg"); return
 		end
 		S.lastSkipTime = tick()
 		if isAdmin then
-			if R.Next then R.Next:FireServer(); Modules.Notify:Success("Skip", "Song skipped") end
+			if R.Next then R.Next:FireServer(); Modules.Notify:Success("Saltar", "Cancion saltada") end
 		else MarketplaceService:PromptProductPurchase(player, skipProductId) end
 	end)
 
@@ -878,8 +904,8 @@ do
 	end)
 
 	skipRemote.OnClientEvent:Connect(function(ok, msg)
-		if ok then Modules.Notify:Success("Skip", msg or "Song skipped")
-		else Modules.Notify:Error("Skip", msg or "Could not skip") end
+		if ok then Modules.Notify:Success("Saltar", msg or "Cancion saltada")
+		else Modules.Notify:Error("Saltar", msg or "No se pudo saltar") end
 	end)
 end
 
@@ -895,7 +921,7 @@ local function createQueueCard()
 
 	local numBadge = makeFrame({dim = UDim2.new(0, 24, 0, 24), pos = UDim2.new(0, 0, 0.5, -12), bg = THEME.accent, bgT = 0, z = 102, name = "NumBadge", parent = card})
 	Modules.UI.rounded(numBadge, 12)
-	makeLabel({dim = UDim2.new(1, 0, 1, 0), text = "1", font = Enum.Font.GothamBold, size = 11, color = Color3.new(1, 1, 1), alignX = Enum.TextXAlignment.Center, z = 103, name = "NumLabel", parent = numBadge})
+	makeLabel({dim = UDim2.new(1, 0, 1, 0), text = "1", font = Enum.Font.GothamBold, size = 11, color = THEME.text, alignX = Enum.TextXAlignment.Center, z = 103, name = "NumLabel", parent = numBadge})
 
 	local avatar = makeImage({dim = UDim2.new(0, 42, 0, 42), pos = UDim2.new(0, 30, 0.5, -21), bg = THEME.elevated, bgT = 0, z = 102, name = "Avatar", parent = card})
 	Modules.UI.rounded(avatar, 6)
@@ -906,8 +932,12 @@ local function createQueueCard()
 	makeLabel({dim = UDim2.new(1, -90, 0, 14), pos = UDim2.new(0, 80, 0, 40), text = "", color = THEME.dim, font = Enum.Font.GothamBold, size = 11, truncate = Enum.TextTruncate.AtEnd, z = 102, name = "RequesterLabel", parent = card})
 
 	if isAdmin then
-		local removeBtn = makeBtn({dim = UDim2.new(0, 28, 0, 28), pos = UDim2.new(1, -32, 0.5, -14), bg = THEME.danger, z = 103, round = 8, name = "RemoveBtn", parent = card})
-		makeImage({dim = UDim2.new(0.7, 0, 0.7, 0), pos = UDim2.new(0.15, 0, 0.15, 0), image = ICONS.DELETE, z = 104, name = "IconImage", parent = removeBtn})
+		local removeBtn, _ = Modules.UI.outlinedCircleBtn(card, {
+			size = 28, icon = ICONS.DELETE,
+			theme = {stroke = THEME.danger, dim = THEME.danger},
+			zIndex = 103, position = UDim2.new(1, -32, 0.5, -14),
+			name = "RemoveBtn",
+		})
 	end
 	return card
 end
@@ -972,7 +1002,7 @@ end
 local function drawQueue()
 	cleanupActiveEffects(); releaseAllQueueCards()
 	if not S.queueEmptyLabel then
-		S.queueEmptyLabel = makeLabel({text = "Queue is empty", color = THEME.muted, size = 13, dim = UDim2.new(1, 0, 0, 60), wrap = true, parent = E.queueScroll})
+		S.queueEmptyLabel = makeLabel({text = "Cola vacia", color = THEME.muted, size = 13, dim = UDim2.new(1, 0, 0, 60), wrap = true, parent = E.queueScroll})
 	end
 	if #S.playQueue == 0 then S.queueEmptyLabel.Visible = true; return end
 	S.queueEmptyLabel.Visible = false
@@ -992,9 +1022,9 @@ local function drawQueue()
 
 		local numBadge = card:FindFirstChild("NumBadge")
 		if numBadge then
-			numBadge.BackgroundColor3 = isActive and Color3.new(1, 1, 1) or THEME.accent
+			numBadge.BackgroundColor3 = isActive and THEME.text or THEME.accent
 			local numLabel = numBadge:FindFirstChild("NumLabel")
-			if numLabel then numLabel.Text = tostring(i); numLabel.TextColor3 = isActive and THEME.accent or Color3.new(1, 1, 1) end
+			if numLabel then numLabel.Text = tostring(i); numLabel.TextColor3 = isActive and THEME.accent or THEME.text end
 		end
 
 		local avatar = card:FindFirstChild("Avatar")
@@ -1018,12 +1048,12 @@ local function drawQueue()
 		if nameClip then
 			nameClip.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 18)
 			local nl = nameClip:FindFirstChild("NameLabel")
-			if nl then nl.Text = song.name or "Unknown"; nl.TextColor3 = isActive and Color3.new(1, 1, 1) or THEME.text end
+			if nl then nl.Text = song.name or "Desconocido"; nl.TextColor3 = isActive and THEME.text or THEME.text end
 		end
 		local pl = card:FindFirstChild("PlaylistLabel")
-		if pl then pl.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 14); pl.Text = song.dj and ("Playlist: " .. song.dj) or "" end
+		if pl then pl.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 14); pl.Text = song.dj and ("Lista: " .. song.dj) or "" end
 		local rl = card:FindFirstChild("RequesterLabel")
-		if rl then rl.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 14); rl.Text = song.requestedBy and ("Queued by: " .. song.requestedBy) or "" end
+		if rl then rl.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 14); rl.Text = song.requestedBy and ("Pedida por: " .. song.requestedBy) or "" end
 	end
 end
 
@@ -1054,9 +1084,18 @@ local function createSongCard()
 	makeLabel({dim = UDim2.new(1, -(textX + 44), 0, 18), pos = UDim2.new(0, textX, 0, 10), font = Enum.Font.GothamBold, size = 14, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "NameLabel", parent = card})
 	makeLabel({dim = UDim2.new(1, -(textX + 44), 0, 14), pos = UDim2.new(0, textX, 0, 30), color = THEME.dim, font = Enum.Font.GothamBold, size = 12, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "ArtistLabel", parent = card})
 
-	local addBtn = makeBtn({dim = UDim2.new(0, 32, 0, 32), pos = UDim2.new(1, -36, 0.5, -16), z = 103, round = 16, name = "AddButton", parent = card})
-	makeImage({dim = UDim2.new(0.75, 0, 0.75, 0), pos = UDim2.new(0.125, 0, 0.125, 0), image = ICONS.PLAY_ADD, imageColor = THEME.text, z = 104, name = "IconImage", parent = addBtn})
-	makeImage({dim = UDim2.new(0.75, 0, 0.75, 0), pos = UDim2.new(0.125, 0, 0.125, 0), image = ICONS.LOADING, imageColor = THEME.text, z = 105, visible = false, name = "LoadingIcon", parent = addBtn})
+	local addBtn, _ = Modules.UI.outlinedCircleBtn(card, {
+		size = 32, icon = ICONS.PLAY_ADD, theme = THEME, zIndex = 103,
+		position = UDim2.new(1, -36, 0.5, -16), name = "AddButton",
+	})
+	makeImage({dim = UDim2.new(0.75, 0, 0.75, 0), pos = UDim2.new(0.125, 0, 0.125, 0), image = ICONS.LOADING, imageColor = THEME.dim, z = 105, visible = false, name = "LoadingIcon", parent = addBtn})
+	local addBtnStroke = addBtn:FindFirstChildWhichIsA("UIStroke")
+	addBtn.MouseEnter:Connect(function()
+		if addBtnStroke then tw(addBtnStroke, 0.12, {Color = THEME.accent}) end
+	end)
+	addBtn.MouseLeave:Connect(function()
+		if addBtnStroke then tw(addBtnStroke, 0.12, {Color = THEME.stroke}) end
+	end)
 
 	addBtn.MouseButton1Click:Connect(function()
 		local songId = card:GetAttribute("SongID")
@@ -1071,7 +1110,8 @@ local function createSongCard()
 					t:Play(); while loadingIcon.Visible do task.wait(0.1) end; if t then t:Cancel() end
 				end)
 			end
-			addBtn.BackgroundColor3 = THEME.elevated; addBtn.AutoButtonColor = false
+			local addStroke = addBtn:FindFirstChildWhichIsA("UIStroke")
+			if addStroke then addStroke.Color = THEME.accent end
 			if R.Add then R.Add:FireServer(songId) end
 		end
 	end)
@@ -1107,22 +1147,23 @@ local function updateSongCard(card, data, index, inQ)
 	local djCover = card:FindFirstChild("DJCover", true)
 	if djCover and S.selectedDJInfo and S.selectedDJInfo.cover then djCover.Image = S.selectedDJInfo.cover end
 	local nl = card:FindFirstChild("NameLabel", true)
-	if nl then nl.Text = data.name or "Loading..."; nl.TextColor3 = data.loaded and THEME.text or THEME.muted end
+	if nl then nl.Text = data.name or "Cargando..."; nl.TextColor3 = data.loaded and THEME.text or THEME.muted end
 	local al = card:FindFirstChild("ArtistLabel", true)
 	if al then al.Text = data.artist or ("ID: " .. data.id) end
 	local ab = card:FindFirstChild("AddButton", true)
 	if ab then
 		local icon = ab:FindFirstChild("IconImage"); local loadingIcon = ab:FindFirstChild("LoadingIcon")
+		local abStroke = ab:FindFirstChildWhichIsA("UIStroke")
 		if S.pendingCardSongIds[data.id] then
-			ab.BackgroundColor3 = THEME.elevated; ab.AutoButtonColor = false
+			if abStroke then abStroke.Color = THEME.accent end
 			if icon then icon.Visible = false end; if loadingIcon then loadingIcon.Visible = true end
 		elseif inQ then
-			ab.BackgroundColor3 = THEME.success; ab.AutoButtonColor = false
-			if icon then icon.Image = ICONS.CHECK; icon.ImageColor3 = Color3.new(1, 1, 1); icon.Visible = true end
+			if abStroke then abStroke.Color = THEME.success end
+			if icon then icon.Image = ICONS.CHECK; icon.ImageColor3 = THEME.success; icon.Visible = true end
 			if loadingIcon then loadingIcon.Visible = false end
 		else
-			ab.BackgroundColor3 = THEME.card; ab.AutoButtonColor = true
-			if icon then icon.Image = ICONS.PLAY_ADD; icon.ImageColor3 = THEME.text; icon.Visible = true end
+			if abStroke then abStroke.Color = THEME.stroke end
+			if icon then icon.Image = ICONS.PLAY_ADD; icon.ImageColor3 = THEME.dim; icon.Visible = true end
 			if loadingIcon then loadingIcon.Visible = false end
 		end
 	end
@@ -1176,11 +1217,11 @@ end
 local function performSearch(query)
 	if query == "" then
 		virtualScrollState.isSearching = false; virtualScrollState.searchQuery = ""; virtualScrollState.searchResults = {}
-		E.songCountLabel.Text = virtualScrollState.totalSongs .. " songs"
+		E.songCountLabel.Text = virtualScrollState.totalSongs .. " canciones"
 		E.songsScroll.CanvasPosition = Vector2.new(0, 0); updateVisibleCards(); return
 	end
 	virtualScrollState.isSearching = true; virtualScrollState.searchQuery = query
-	E.loadingIndicator.Visible = true; E.loadingIndicator.Text = "Searching..."
+	E.loadingIndicator.Visible = true; E.loadingIndicator.Text = "Buscando..."
 	if R.SearchSongs and S.selectedDJ then R.SearchSongs:FireServer(S.selectedDJ, query) end
 end
 
@@ -1225,7 +1266,7 @@ local function updateHeaderCover(song)
 			TweenService:Create(E.miniCover, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {ImageTransparency = 0}):Play()
 		end)
 	end
-	E.headerDJName.Text = "Queued by: " .. (song.requestedBy or song.dj or "Unknown")
+	E.headerDJName.Text = "Pedida por: " .. (song.requestedBy or song.dj or "Desconocido")
 end
 
 -- ════════════════════════════════════════════════════════════════
@@ -1249,17 +1290,17 @@ local function selectDJ(djName, djData, card)
 	end
 	S.selectedDJ = djName; S.selectedDJInfo = djData; S.selectedDJCard = card
 	card.BackgroundColor3 = THEME.accent; card.BackgroundTransparency = 0
-	local dn = card:FindFirstChild("DJNameLabel"); if dn then tw(dn, 0.25, {TextColor3 = Color3.new(1, 1, 1)}) end
+	local dn = card:FindFirstChild("DJNameLabel"); if dn then tw(dn, 0.25, {TextColor3 = THEME.text}) end
 	local dc = card:FindFirstChild("CountLabel"); if dc then tw(dc, 0.25, {TextColor3 = THEME.text}) end
 
 	virtualScrollState.totalSongs = djData.songCount; virtualScrollState.songData = {}
 	virtualScrollState.searchResults = {}; virtualScrollState.isSearching = false
 	virtualScrollState.searchQuery = ""; virtualScrollState.pendingRequests = {}
 
-	E.searchInput.Text = ""; E.songCountLabel.Text = djData.songCount .. " songs"; E.songCountLabel.Visible = true
-	E.songsPlaceholder.Visible = false; E.songsTitle.Text = "ALL TRACKS"
+	E.searchInput.Text = ""; E.songCountLabel.Text = djData.songCount .. " canciones"; E.songCountLabel.Visible = true
+	E.songsPlaceholder.Visible = false; E.songsTitle.Text = "CANCIONES"
 	releaseAllCards(); E.songsScroll.CanvasPosition = Vector2.new(0, 0)
-	E.loadingIndicator.Visible = true; E.loadingIndicator.Text = "Loading tracks..."; E.loadingIndicator.Position = UDim2.new(0, 0, 0, 4)
+	E.loadingIndicator.Visible = true; E.loadingIndicator.Text = "Cargando canciones..."; E.loadingIndicator.Position = UDim2.new(0, 0, 0, 4)
 
 	local totalH = djData.songCount * (CFG.CARD_HEIGHT + CFG.CARD_PADDING)
 	E.songsContainer.Size = UDim2.new(1, 0, 0, totalH); E.songsScroll.CanvasSize = UDim2.new(0, 0, 0, totalH + 20)
@@ -1269,15 +1310,15 @@ end
 
 local function drawDJs()
 	clearChildren(E.djsScroll, {"UIListLayout", "UIPadding"}); S.selectedDJCard = nil
-	if #S.allDJs == 0 then makeLabel({text = "No collections", color = THEME.muted, size = 13, dim = UDim2.new(1, 0, 0, 60), parent = E.djsScroll}); return end
+	if #S.allDJs == 0 then makeLabel({text = "Sin listas", color = THEME.muted, size = 13, dim = UDim2.new(1, 0, 0, 60), parent = E.djsScroll}); return end
 	for _, dj in ipairs(S.allDJs) do
 		local isSel = S.selectedDJ == dj.name
 		local card = makeBtn({dim = UDim2.new(1, 0, 0, 52), bg = isSel and THEME.accent or THEME.elevated, z = 102, round = 8, name = "DJCard", parent = E.djsScroll})
 		card.BackgroundTransparency = isSel and 0 or (THEME.frameAlpha or 0.3); card.AutoButtonColor = false
 		if isSel then S.selectedDJCard = card end
 		make("UIPadding", {PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = card})
-		makeLabel({dim = UDim2.new(1, 0, 0, 20), pos = UDim2.new(0, 0, 0, 8), text = dj.name, font = Enum.Font.GothamBold, size = 14, color = isSel and Color3.new(1, 1, 1) or THEME.text, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "DJNameLabel", parent = card})
-		makeLabel({dim = UDim2.new(1, 0, 0, 16), pos = UDim2.new(0, 0, 0, 28), text = dj.songCount .. " songs", font = Enum.Font.Gotham, size = 12, color = isSel and THEME.text or THEME.muted, z = 103, name = "CountLabel", parent = card})
+		makeLabel({dim = UDim2.new(1, 0, 0, 20), pos = UDim2.new(0, 0, 0, 8), text = dj.name, font = Enum.Font.GothamBold, size = 14, color = isSel and THEME.text or THEME.text, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "DJNameLabel", parent = card})
+		makeLabel({dim = UDim2.new(1, 0, 0, 16), pos = UDim2.new(0, 0, 0, 28), text = dj.songCount .. " canciones", font = Enum.Font.Gotham, size = 12, color = isSel and THEME.text or THEME.muted, z = 103, name = "CountLabel", parent = card})
 		card.MouseEnter:Connect(function() if S.selectedDJCard ~= card then tw(card, 0.15, {BackgroundTransparency = 0.15}) end end)
 		card.MouseLeave:Connect(function() if S.selectedDJCard ~= card then tw(card, 0.15, {BackgroundTransparency = THEME.frameAlpha or 0.3}) end end)
 		card.MouseButton1Click:Connect(function() selectDJ(dj.name, dj, card) end)
@@ -1288,7 +1329,7 @@ end
 -- PROGRESS BAR UPDATE
 -- ════════════════════════════════════════════════════════════════
 local function updateProgressBar(dt)
-	if not S.currentSoundObject then S.currentSoundObject = workspace:FindFirstChild("SoundMG") end
+	if not S.currentSoundObject then S.currentSoundObject = workspace:FindFirstChild("QueueSound") end
 	if not S.currentSoundObject or not S.currentSoundObject:IsA("Sound") or not S.currentSoundObject.Parent then
 		if S.progressTween then S.progressTween:Cancel(); S.progressTween = nil end
 		E.progressFill.Size = UDim2.new(0, 0, 1, 0); E.currentTimeLabel.Text = "0:00"; E.totalTimeLabel.Text = "0:00"
@@ -1374,13 +1415,13 @@ end)
 -- REMOTE UPDATES
 -- ════════════════════════════════════════════════════════════════
 local function updateNowPlayingInfo(song)
-	if song then E.songTitle.Text = song.name; E.headerDJName.Text = "Queued by: " .. (song.requestedBy or song.artist or "Unknown")
-	else E.songTitle.Text = "No song playing"; E.headerDJName.Text = "" end
+	if song then E.songTitle.Text = song.name; E.headerDJName.Text = "Pedida por: " .. (song.requestedBy or song.artist or "Desconocido")
+	else E.songTitle.Text = "Sin cancion"; E.headerDJName.Text = "" end
 end
 
 local function processUpdate(data)
 	S.playQueue = data.queue or {}; S.currentSong = data.currentSong
-	S.currentSoundObject = workspace:FindFirstChild("SoundMG")
+	S.currentSoundObject = workspace:FindFirstChild("QueueSound")
 	updateNowPlayingInfo(S.currentSong); updateHeaderCover(S.currentSong); drawQueue()
 	if S.selectedDJ then updateVisibleCards() end
 	local newDJs = data.djs or S.allDJs; local djsChanged = #newDJs ~= #S.allDJs
@@ -1422,7 +1463,7 @@ if R.SearchSongs then
 		if not data or data.djName ~= S.selectedDJ then return end
 		E.loadingIndicator.Visible = false; virtualScrollState.searchResults = data.songs or {}
 		local total = data.totalInDJ or virtualScrollState.totalSongs
-		local countText = #virtualScrollState.searchResults .. " / " .. total .. " songs"
+		local countText = #virtualScrollState.searchResults .. " / " .. total .. " canciones"
 		if data.cachedCount and data.cachedCount < total then countText = countText .. " " .. math.floor(data.cachedCount / total * 100) .. "%" end
 		E.songCountLabel.Text = countText; E.songsScroll.CanvasPosition = Vector2.new(0, 0); updateVisibleCards()
 	end)
@@ -1431,7 +1472,7 @@ end
 if R.GetSongsByDJ then
 	R.GetSongsByDJ.OnClientEvent:Connect(function(data)
 		if not data or data.djName ~= S.selectedDJ then return end
-		virtualScrollState.totalSongs = data.total or 0; E.songCountLabel.Text = data.total .. " songs"
+		virtualScrollState.totalSongs = data.total or 0; E.songCountLabel.Text = data.total .. " canciones"
 		local totalH = data.total * (CFG.CARD_HEIGHT + CFG.CARD_PADDING)
 		E.songsContainer.Size = UDim2.new(1, 0, 0, totalH); E.songsScroll.CanvasSize = UDim2.new(0, 0, 0, totalH + 20)
 	end)

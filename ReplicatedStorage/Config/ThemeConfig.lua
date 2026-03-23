@@ -16,10 +16,10 @@ local THEME = {
 	muted    = Color3.fromRGB(130, 130, 130),  -- texto apagado
 
 	-- ═══ BORDE ═══
-	stroke   = Color3.fromRGB(60,  60,  60),
+	stroke   = Color3.fromRGB(85,  85,  85),
 
 	-- ═══ ACENTO ═══
-	accent   = Color3.fromRGB(160, 160, 160),  -- gris claro (progreso, highlights)
+	accent   = Color3.fromRGB(200, 200, 200),  -- gris claro (progreso, highlights)
 
 	-- ═══ ESTADOS ═══
 	danger   = Color3.fromRGB(210, 45,  25),
@@ -31,7 +31,7 @@ local THEME = {
 	frameAlpha   = 0.08,
 	lightAlpha   = 0.15,
 	mediumAlpha  = 0.6,
-	subtleAlpha  = 0.92,
+	subtleAlpha  = 0.7,
 
 	-- ═══ LAYOUT ═══
 	panelWidth  = 390,
