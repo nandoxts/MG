@@ -175,9 +175,9 @@ local MusicSystemConfig = require(ReplicatedStorage:WaitForChild("Config"):WaitF
 local isAdmin = MusicSystemConfig:IsAdmin(player) and true
 
 local CFG = {
-	R_PANEL = 12, R_CTRL = 10,
+	R_PANEL = 14, R_CTRL = 10,
 	ENABLE_BLUR = true, BLUR_SIZE = 14,
-	CARD_HEIGHT = 54, CARD_PADDING = 6,
+	CARD_HEIGHT = 58, CARD_PADDING = 6,
 	VISIBLE_BUFFER = 3, BATCH_SIZE = 15, MAX_POOL_SIZE = 25,
 	MAX_QUEUE_POOL = 30,
 	SCROLL_DEBOUNCE = 0.03,
@@ -491,6 +491,8 @@ do
 	Modules.UI.rounded(progressBar, 5)
 	E.progressFill = makeFrame({dim = UDim2.new(0, 0, 1, 0), bg = THEME.accent, bgT = 0, z = 104, parent = progressBar})
 	Modules.UI.rounded(E.progressFill, 5)
+	E.progressDot = makeFrame({dim = UDim2.new(0, 14, 0, 14), pos = UDim2.new(1, -7, 0.5, -7), bg = THEME.text, bgT = 0, z = 107, name = "ProgressDot", parent = E.progressFill})
+	Modules.UI.rounded(E.progressDot, 7)
 	E.totalTimeLabel = makeLabel({dim = UDim2.new(0, 44, 1, 0), pos = UDim2.new(1, -44, 0, 0), text = "0:00", color = THEME.muted, font = Enum.Font.GothamBold, size = mob and 13 or 15, alignX = Enum.TextXAlignment.Left, z = 104, parent = progressContainer})
 
 	-- Volume Control
@@ -559,7 +561,7 @@ end
 do
 	local homeRight = makeFrame({dim = UDim2.new(LAY.HOME_RIGHT_W, 0, 1, 0), pos = UDim2.new(LAY.HOME_LEFT_W, 0, 0, 0), z = 100, name = "HomeRight", parent = E.homeContent})
 	local queueHeader = makeFrame({dim = UDim2.new(1, 0, 0, LAY.COL_HEADER_H), z = 101, parent = homeRight})
-	makeLabel({text = "COLA", font = Enum.Font.GothamBlack, size = 20, dim = UDim2.new(1, -16, 1, 0), pos = UDim2.new(0, 12, 0, 0), color = THEME.text, z = 102, parent = queueHeader})
+	makeLabel({text = "COLA", font = Enum.Font.GothamBlack, size = 20, dim = UDim2.new(1, -16, 1, 0), pos = UDim2.new(0, 12, 0, 0), color = THEME.accent, z = 102, parent = queueHeader})
 
 	if isAdmin then
 		E.clearB = makeBtn({dim = UDim2.new(0, 60, 0, 24), pos = UDim2.new(1, -68, 0.5, -12), bg = THEME.warn, text = "LIMPIAR", textSize = 10, z = 103, round = 6, parent = queueHeader})
@@ -599,7 +601,7 @@ do
 	local libRight = makeFrame({dim = UDim2.new(LAY.LIB_RIGHT_W, 0, 1, 0), pos = UDim2.new(LAY.LIB_LEFT_W, 0, 0, 0), z = 100, clip = true, name = "LibRight", parent = E.libraryContent})
 	local songsHeader = makeFrame({dim = UDim2.new(1, -20, 0, 82), pos = UDim2.new(0, 10, 0, 4), z = 101, clip = true, parent = libRight})
 
-	E.songsTitle = makeLabel({text = "CANCIONES", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(1, -70, 0, 28), truncate = Enum.TextTruncate.AtEnd, alignX = Enum.TextXAlignment.Left, z = 102, name = "SongsTitle", parent = songsHeader})
+	E.songsTitle = makeLabel({text = "CANCIONES", font = Enum.Font.GothamBlack, size = 18, color = THEME.accent, dim = UDim2.new(1, -70, 0, 28), truncate = Enum.TextTruncate.AtEnd, alignX = Enum.TextXAlignment.Left, z = 102, name = "SongsTitle", parent = songsHeader})
 	E.songCountLabel = makeLabel({dim = UDim2.new(0, 65, 0, 28), pos = UDim2.new(1, -65, 0, 0), color = THEME.accent, font = Enum.Font.GothamBold, size = 12, alignX = Enum.TextXAlignment.Right, z = 102, visible = false, parent = songsHeader})
 
 	local searchContainer
@@ -916,29 +918,30 @@ end
 -- QUEUE CARD POOL
 -- ════════════════════════════════════════════════════════════════
 local function createQueueCard()
-	local card = makeFrame({dim = UDim2.new(1, 0, 0, 60), bg = THEME.card, bgT = THEME.frameAlpha, z = 101})
+	local card = makeFrame({dim = UDim2.new(1, 0, 0, 68), bg = THEME.card, bgT = THEME.frameAlpha, z = 101})
 	card.Visible = false
-	Modules.UI.rounded(card, 10)
-	make("UIStroke", {Color = THEME.stroke, Thickness = 1, Transparency = 0.3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = card})
-	make("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 8), Parent = card})
+	Modules.UI.rounded(card, 12)
+	make("UIStroke", {Color = THEME.stroke, Thickness = 1, Transparency = 0.25, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = card})
+	make("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 10), Parent = card})
 
-	local numBadge = makeFrame({dim = UDim2.new(0, 24, 0, 24), pos = UDim2.new(0, 0, 0.5, -12), bg = THEME.accent, bgT = 0, z = 102, name = "NumBadge", parent = card})
-	Modules.UI.rounded(numBadge, 12)
-	makeLabel({dim = UDim2.new(1, 0, 1, 0), text = "1", font = Enum.Font.GothamBold, size = 11, color = THEME.text, alignX = Enum.TextXAlignment.Center, z = 103, name = "NumLabel", parent = numBadge})
+	local numBadge = makeFrame({dim = UDim2.new(0, 26, 0, 26), pos = UDim2.new(0, 0, 0.5, -13), bg = THEME.accent, bgT = 0, z = 102, name = "NumBadge", parent = card})
+	Modules.UI.rounded(numBadge, 13)
+	makeLabel({dim = UDim2.new(1, 0, 1, 0), text = "1", font = Enum.Font.GothamBold, size = 12, color = THEME.text, alignX = Enum.TextXAlignment.Center, z = 103, name = "NumLabel", parent = numBadge})
 
-	local avatar = makeImage({dim = UDim2.new(0, 42, 0, 42), pos = UDim2.new(0, 30, 0.5, -21), bg = THEME.elevated, bgT = 0, z = 102, name = "Avatar", parent = card})
-	Modules.UI.rounded(avatar, 6)
+	local avatar = makeImage({dim = UDim2.new(0, 44, 0, 44), pos = UDim2.new(0, 34, 0.5, -22), bg = THEME.elevated, bgT = 0, z = 102, name = "Avatar", parent = card})
+	Modules.UI.rounded(avatar, 22)
+	make("UIStroke", {Color = THEME.stroke, Thickness = 1, Transparency = 0.4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = avatar})
 
-	local nameClip = makeFrame({dim = UDim2.new(1, -90, 0, 18), pos = UDim2.new(0, 80, 0, 8), z = 102, clip = true, name = "NameClip", parent = card})
-	makeLabel({text = "", color = THEME.text, font = Enum.Font.GothamBold, size = 13, truncate = Enum.TextTruncate.AtEnd, z = 102, name = "NameLabel", parent = nameClip})
-	makeLabel({dim = UDim2.new(1, -90, 0, 14), pos = UDim2.new(0, 80, 0, 26), text = "", color = THEME.dim, font = Enum.Font.GothamBold, size = 11, truncate = Enum.TextTruncate.AtEnd, z = 102, name = "PlaylistLabel", parent = card})
-	makeLabel({dim = UDim2.new(1, -90, 0, 14), pos = UDim2.new(0, 80, 0, 40), text = "", color = THEME.dim, font = Enum.Font.GothamBold, size = 11, truncate = Enum.TextTruncate.AtEnd, z = 102, name = "RequesterLabel", parent = card})
+	local nameClip = makeFrame({dim = UDim2.new(1, -96, 0, 20), pos = UDim2.new(0, 86, 0, 10), z = 102, clip = true, name = "NameClip", parent = card})
+	makeLabel({text = "", color = THEME.text, font = Enum.Font.GothamBold, size = 14, truncate = Enum.TextTruncate.AtEnd, z = 102, name = "NameLabel", parent = nameClip})
+	makeLabel({dim = UDim2.new(1, -96, 0, 14), pos = UDim2.new(0, 86, 0, 30), text = "", color = THEME.dim, font = Enum.Font.Gotham, size = 11, truncate = Enum.TextTruncate.AtEnd, z = 102, name = "PlaylistLabel", parent = card})
+	makeLabel({dim = UDim2.new(1, -96, 0, 14), pos = UDim2.new(0, 86, 0, 46), text = "", color = THEME.muted, font = Enum.Font.Gotham, size = 11, truncate = Enum.TextTruncate.AtEnd, z = 102, name = "RequesterLabel", parent = card})
 
 	if isAdmin then
 		local removeBtn, _ = Modules.UI.outlinedCircleBtn(card, {
-			size = 28, icon = ICONS.DELETE,
+			size = 30, icon = ICONS.DELETE,
 			theme = {stroke = THEME.danger, dim = THEME.danger},
-			zIndex = 103, position = UDim2.new(1, -32, 0.5, -14),
+			zIndex = 103, position = UDim2.new(1, -34, 0.5, -15),
 			name = "RemoveBtn",
 		})
 	end
@@ -1016,7 +1019,7 @@ local function drawQueue()
 		if not card then break end
 		card.LayoutOrder = i; card:SetAttribute("QueueIndex", i)
 		card.BackgroundColor3 = isActive and THEME.accent or THEME.card
-		card.BackgroundTransparency = isActive and THEME.subtleAlpha or THEME.frameAlpha
+		card.BackgroundTransparency = isActive and 0.12 or THEME.frameAlpha
 		card.Visible = true; table.insert(S.activeQueueCards, card)
 
 		local stroke = card:FindFirstChildWhichIsA("UIStroke")
@@ -1049,14 +1052,14 @@ local function drawQueue()
 
 		local nameClip = card:FindFirstChild("NameClip")
 		if nameClip then
-			nameClip.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 18)
+			nameClip.Size = UDim2.new(1, -(86 + (isAdmin and 44 or 10)), 0, 20)
 			local nl = nameClip:FindFirstChild("NameLabel")
-			if nl then nl.Text = song.name or "Desconocido"; nl.TextColor3 = isActive and THEME.text or THEME.text end
+			if nl then nl.Text = song.name or "Desconocido"; nl.TextColor3 = THEME.text end
 		end
 		local pl = card:FindFirstChild("PlaylistLabel")
-		if pl then pl.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 14); pl.Text = song.dj and ("Lista: " .. song.dj) or "" end
+		if pl then pl.Size = UDim2.new(1, -(86 + (isAdmin and 44 or 10)), 0, 14); pl.Text = song.dj and ("Lista: " .. song.dj) or "" end
 		local rl = card:FindFirstChild("RequesterLabel")
-		if rl then rl.Size = UDim2.new(1, -(80 + (isAdmin and 40 or 8)), 0, 14); rl.Text = song.requestedBy and ("Pedida por: " .. song.requestedBy) or "" end
+		if rl then rl.Size = UDim2.new(1, -(86 + (isAdmin and 44 or 10)), 0, 14); rl.Text = song.requestedBy and ("Pedida por: " .. song.requestedBy) or "" end
 	end
 end
 
@@ -1075,17 +1078,17 @@ end
 -- SONG CARD POOL (Library virtual scroll)
 -- ════════════════════════════════════════════════════════════════
 local function createSongCard()
-	local card = makeCanvas(nil, 8, 102)
+	local card = makeCanvas(nil, 12, 102)
 	card.Name = "SongCard"; card.Size = UDim2.new(1, -8, 0, CFG.CARD_HEIGHT)
 	card.BackgroundColor3 = THEME.card; card.BackgroundTransparency = THEME.frameAlpha; card.Visible = false
-	Modules.UI.stroked(card, 0.3)
+	Modules.UI.stroked(card, 0.25)
 
 	local coverBg = makeFrame({dim = UDim2.new(0, CFG.CARD_HEIGHT, 1, 0), bg = THEME.elevated, bgT = 0, z = 103, name = "CoverBg", parent = card})
 	make("ImageLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, BorderSizePixel = 0, ZIndex = 104, Name = "DJCover", Parent = coverBg})
 
-	local textX = CFG.CARD_HEIGHT + 8
-	makeLabel({dim = UDim2.new(1, -(textX + 44), 0, 18), pos = UDim2.new(0, textX, 0, 10), font = Enum.Font.GothamBold, size = 14, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "NameLabel", parent = card})
-	makeLabel({dim = UDim2.new(1, -(textX + 44), 0, 14), pos = UDim2.new(0, textX, 0, 30), color = THEME.dim, font = Enum.Font.GothamBold, size = 12, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "ArtistLabel", parent = card})
+	local textX = CFG.CARD_HEIGHT + 10
+	makeLabel({dim = UDim2.new(1, -(textX + 46), 0, 20), pos = UDim2.new(0, textX, 0, 10), font = Enum.Font.GothamBold, size = 14, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "NameLabel", parent = card})
+	makeLabel({dim = UDim2.new(1, -(textX + 46), 0, 16), pos = UDim2.new(0, textX, 0, 32), color = THEME.dim, font = Enum.Font.Gotham, size = 12, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "ArtistLabel", parent = card})
 
 	local addBtn, _ = Modules.UI.outlinedCircleBtn(card, {
 		size = 32, icon = ICONS.PLAY_ADD, theme = THEME, zIndex = 103,
@@ -1316,13 +1319,13 @@ local function drawDJs()
 	if #S.allDJs == 0 then makeLabel({text = "Sin listas", color = THEME.muted, size = 13, dim = UDim2.new(1, 0, 0, 60), parent = E.djsScroll}); return end
 	for _, dj in ipairs(S.allDJs) do
 		local isSel = S.selectedDJ == dj.name
-		local card = makeBtn({dim = UDim2.new(1, 0, 0, 52), bg = isSel and THEME.accent or THEME.elevated, z = 102, round = 8, name = "DJCard", parent = E.djsScroll})
+		local card = makeBtn({dim = UDim2.new(1, 0, 0, 56), bg = isSel and THEME.accent or THEME.elevated, z = 102, round = 10, name = "DJCard", parent = E.djsScroll})
 		card.BackgroundTransparency = isSel and 0 or (THEME.frameAlpha or 0.3); card.AutoButtonColor = false
 		if isSel then S.selectedDJCard = card end
-		make("UIPadding", {PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = card})
-		makeLabel({dim = UDim2.new(1, 0, 0, 20), pos = UDim2.new(0, 0, 0, 8), text = dj.name, font = Enum.Font.GothamBold, size = 14, color = isSel and THEME.text or THEME.text, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "DJNameLabel", parent = card})
-		makeLabel({dim = UDim2.new(1, 0, 0, 16), pos = UDim2.new(0, 0, 0, 28), text = dj.songCount .. " canciones", font = Enum.Font.Gotham, size = 12, color = isSel and THEME.text or THEME.muted, z = 103, name = "CountLabel", parent = card})
-		card.MouseEnter:Connect(function() if S.selectedDJCard ~= card then tw(card, 0.15, {BackgroundTransparency = 0.15}) end end)
+		make("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), Parent = card})
+		makeLabel({dim = UDim2.new(1, 0, 0, 20), pos = UDim2.new(0, 0, 0, 10), text = dj.name, font = Enum.Font.GothamBold, size = 14, color = THEME.text, truncate = Enum.TextTruncate.AtEnd, z = 103, name = "DJNameLabel", parent = card})
+		makeLabel({dim = UDim2.new(1, 0, 0, 16), pos = UDim2.new(0, 0, 0, 30), text = dj.songCount .. " canciones", font = Enum.Font.Gotham, size = 12, color = isSel and THEME.text or THEME.muted, z = 103, name = "CountLabel", parent = card})
+		card.MouseEnter:Connect(function() if S.selectedDJCard ~= card then tw(card, 0.15, {BackgroundTransparency = 0.12}) end end)
 		card.MouseLeave:Connect(function() if S.selectedDJCard ~= card then tw(card, 0.15, {BackgroundTransparency = THEME.frameAlpha or 0.3}) end end)
 		card.MouseButton1Click:Connect(function() selectDJ(dj.name, dj, card) end)
 	end
