@@ -66,7 +66,7 @@ local IsMobile = UserInputService.TouchEnabled
 local EmotesFavs = {}
 local DanceActivated = nil
 local ActiveCard = nil
-local TabActual = "POSES"
+local TabActual = "DANCES"
 local IsSynced = false -- Estado de sincronización
 local currentLeaderUserId = nil -- UserId del jugador que sigo (nil si no sigo a nadie)
 
@@ -309,12 +309,11 @@ local tabHeight = IsMobile and 38 or 46
 
 local subTabs = SubTabs.new(ContentCanvas, THEME_CONFIG, {
 	tabs = {
-		{ id = "POSES",     label = "POSES"     },
 		{ id = "DANCES",    label = "DANCES"    },
 		{ id = "FAVORITOS", label = "FAVS" },
 	},
 	height = tabHeight,
-	default = "POSES",
+	default = "DANCES",
 	textSize = IsMobile and 13 or 15,
 })
 
@@ -1105,32 +1104,6 @@ local function RestaurarBaileActivo()
 	end
 end
 
-local function CargarPoses(filtro)
-	LimpiarScroll()
-
-	filtro = (filtro or ""):lower()
-	local orden = 1
-	local hayVisibles = false
-
-	local function pasaFiltro(nombre)
-		return filtro == "" or nombre:lower():find(filtro, 1, true)
-	end
-
-	for _, v in ipairs(Modulo.Emotes or {}) do
-		if pasaFiltro(v.Nombre) then
-			CrearTarjeta(v.Nombre, v.ID, orden, true)
-			orden = orden + 1
-			hayVisibles = true
-		end
-	end
-
-	if not hayVisibles then
-		MostrarEmptyMessage(true, filtro ~= "" and "Sin resultados" or "Sin poses aún")
-	end
-
-	RestaurarBaileActivo()
-end
-
 local function CargarDances(filtro)
 	LimpiarScroll()
 
@@ -1187,9 +1160,7 @@ end
 subTabs.onSwitch = function(tabId)
 	TabActual = tabId
 	local filtro = SearchBox and SearchBox.Text or ""
-	if tabId == "POSES" then
-		CargarPoses(filtro)
-	elseif tabId == "DANCES" then
+	if tabId == "DANCES" then
 		CargarDances(filtro)
 	else
 		CargarFavoritos(filtro)
@@ -1206,9 +1177,7 @@ if SearchBox then
 		if searchDebounce then return end
 		searchDebounce = true
 		task.delay(0.25, function()
-			if TabActual == "POSES" then
-				CargarPoses(SearchBox.Text)
-			elseif TabActual == "DANCES" then
+			if TabActual == "DANCES" then
 				CargarDances(SearchBox.Text)
 			else
 				CargarFavoritos(SearchBox.Text)
@@ -1278,15 +1247,6 @@ task.spawn(function()
 			table.insert(preloadList, a)
 		end
 	end
-	if Modulo.Emotes then
-		for _, v in ipairs(Modulo.Emotes) do
-			if v.ID and v.ID ~= 0 then
-				local a = Instance.new("Animation")
-				a.AnimationId = "rbxassetid://" .. tostring(v.ID)
-				table.insert(preloadList, a)
-			end
-		end
-	end
 	pcall(function()
 		ContentProvider:PreloadAsync(preloadList)
 	end)
@@ -1294,7 +1254,7 @@ end)
 
 local ok, favs = pcall(function() return ObtenerFavs:InvokeServer() end)
 EmotesFavs = (ok and favs) or {}
-CargarPoses()
+CargarDances()
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- GLOBAL FUNCTIONS (Para TOPBAR.lua)
