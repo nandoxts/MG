@@ -25,6 +25,7 @@ local Modules = {
 	UI = require(ReplicatedStorage:WaitForChild("Core"):WaitForChild("UI")),
 	SearchModern = require(ReplicatedStorage:WaitForChild("UIComponents"):WaitForChild("SearchModern")),
 	ModernScrollbar = require(ReplicatedStorage:WaitForChild("UIComponents"):WaitForChild("ModernScrollbar")),
+	SubTabs = require(ReplicatedStorage:WaitForChild("UIComponents"):WaitForChild("SubTabs")),
 	THEME = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("ThemeConfig")),
 }
 
@@ -371,26 +372,16 @@ do
 	makeFrame({dim = UDim2.new(1, 0, 0, 1), pos = UDim2.new(0, 0, 1, -1), bg = THEME.accent, bgT = 0.75, z = 121, parent = topBar})
 	makeLabel({text = "MUSICA", font = Enum.Font.GothamBlack, size = 18, dim = UDim2.new(0, 200, 1, 0), pos = UDim2.new(0, 20, 0, 0), color = THEME.accent, z = 122, parent = topBar})
 
-	local tabContainer = makeFrame({dim = UDim2.new(0, 220, 0, 34), pos = UDim2.new(0.5, -110, 0.5, -17), bg = THEME.card, bgT = 0, z = 122, clip = true, name = "TabContainer", parent = topBar})
-	Modules.UI.rounded(tabContainer, 17)
-	make("UIStroke", {Color = THEME.stroke, Thickness = 1, Transparency = 0.25, Parent = tabContainer})
-
-	E.tabIndicator = makeFrame({
-		dim = UDim2.new(0.5, -4, 1, -4),
-		pos = UDim2.new(0, 2, 0, 2),
-		bg = THEME.accent,
-		bgT = 0,
-		z = 123,
-		name = "TabIndicator",
-		parent = tabContainer,
+	E.mainTabs = Modules.SubTabs.new(topBar, THEME, {
+		tabs = {{id = "Home", label = "Inicio"}, {id = "Library", label = "Biblioteca"}},
+		height = 42,
+		default = "Home",
+		z = 122,
+		textSize = 15,
 	})
-	Modules.UI.rounded(E.tabIndicator, 14)
-
-	E.tabHome = makeBtn({dim = UDim2.new(0.5, 0, 1, 0), pos = UDim2.new(0, 0, 0, 0), bg = THEME.card, text = "Inicio", textSize = 15, font = Enum.Font.GothamBold, z = 124, name = "TabHome", parent = tabContainer})
-	E.tabHome.BackgroundTransparency = 1
-
-	E.tabLibrary = makeBtn({dim = UDim2.new(0.5, 0, 1, 0), pos = UDim2.new(0.5, 0, 0, 0), bg = THEME.card, text = "Biblioteca", textSize = 15, font = Enum.Font.GothamBold, textColor = THEME.muted, z = 124, name = "TabLibrary", parent = tabContainer})
-	E.tabLibrary.BackgroundTransparency = 1
+	E.mainTabs.bar.Size     = UDim2.new(0, 260, 0, 42)
+	E.mainTabs.bar.Position = UDim2.new(0.5, -130, 0.5, -21)
+	E.mainTabs.bar.BackgroundTransparency = 1
 
 	local closeBtn, _ = Modules.UI.outlinedCircleBtn(topBar, {
 		size = 32, icon = "", theme = THEME, zIndex = 123,
@@ -434,14 +425,37 @@ do
 	})
 	E.homeBackgroundCover.Visible = false
 
+	-- Overlay central semitransparente (oscurece la imagen en general)
 	E.homeBackgroundOverlay = makeFrame({
 		dim = UDim2.new(1, 0, 1, 0),
 		pos = UDim2.new(0, 0, 0, 0),
 		bg = THEME.bg,
-		bgT = 0.5,
+		bgT = 0.45,
 		z = 101,
 		name = "HomeBackgroundOverlay",
 		parent = homeLeft,
+	})
+
+	-- Gradiente oscuro: arriba
+	local bgGradTop = makeFrame({dim = UDim2.new(1, 0, 0.5, 0), pos = UDim2.new(0, 0, 0, 0), bg = THEME.bg, bgT = 0, z = 102, name = "BgGradTop", parent = homeLeft})
+	make("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new{
+			NumberSequenceKeypoint.new(0, 0.0),
+			NumberSequenceKeypoint.new(1, 1.0),
+		},
+		Parent = bgGradTop,
+	})
+
+	-- Gradiente oscuro: abajo
+	local bgGradBot = makeFrame({dim = UDim2.new(1, 0, 0.5, 0), pos = UDim2.new(0, 0, 0.5, 0), bg = THEME.bg, bgT = 0, z = 102, name = "BgGradBot", parent = homeLeft})
+	make("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new{
+			NumberSequenceKeypoint.new(0, 1.0),
+			NumberSequenceKeypoint.new(1, 0.0),
+		},
+		Parent = bgGradBot,
 	})
 
 	makeFrame({dim = UDim2.new(0, 1, 1, -20), pos = UDim2.new(1, 0, 0, 10), bg = THEME.stroke, bgT = 0.5, z = 101, parent = homeLeft})
@@ -459,13 +473,9 @@ do
 
 	-- Album Cover
 	local coverContainer = makeFrame({dim = UDim2.new(1, 0, 0, LAY.COVER_SIZE + 16), pos = UDim2.new(0, 0, 0, 38), z = 102, parent = nowPlayingScroll})
-	local _glowS = LAY.COVER_SIZE + 40
-	local coverGlow = makeFrame({dim = UDim2.new(0, _glowS, 0, _glowS), pos = UDim2.new(0.5, -_glowS/2, 0, 4 - 20), bg = THEME.accent, bgT = 0.85, z = 102, name = "CoverGlow", parent = coverContainer})
-	Modules.UI.rounded(coverGlow, 20)
 	E.miniCover = makeImage({dim = UDim2.new(0, LAY.COVER_SIZE, 0, LAY.COVER_SIZE), pos = UDim2.new(0.5, -LAY.COVER_SIZE/2, 0, 4), z = 103, name = "MiniCover", parent = coverContainer})
 	E.miniCover.ClipsDescendants = true
 	Modules.UI.rounded(E.miniCover, 12)
-	make("UIStroke", {Color = THEME.accent, Thickness = 2, Transparency = 0.3, Parent = E.miniCover})
 
 	-- Song Info
 	local infoY = 38 + LAY.COVER_SIZE + 20
@@ -500,21 +510,26 @@ do
 	local volFrame = makeFrame({dim = UDim2.new(1, -32, 0, 40), pos = UDim2.new(0, 16, 0, volY), z = 103, name = "VolumeControl", parent = nowPlayingScroll})
 	makeImage({dim = UDim2.new(0, 24, 0, 24), pos = UDim2.new(0, 8, 0.5, -12), image = ICONS.VOL_UP, z = 104, parent = volFrame})
 
-	E.volSliderTrack = makeFrame({dim = UDim2.new(1, -120, 0, 8), pos = UDim2.new(0, 40, 0.5, -4), bg = THEME.elevated, bgT = 0, z = 104, name = "VolTrack", parent = volFrame})
+	E.volSliderTrack = makeFrame({dim = UDim2.new(1, -120, 0, 18), pos = UDim2.new(0, 40, 0.5, -9), bg = THEME.elevated, bgT = 0, z = 104, name = "VolTrack", parent = volFrame})
 	Modules.UI.rounded(E.volSliderTrack, 4)
 
-	E.volSliderFill = makeFrame({dim = UDim2.new(1, 0, 1, 0), bg = THEME.accent, bgT = 0, z = 105, name = "VolFill", parent = E.volSliderTrack})
-	Modules.UI.rounded(E.volSliderFill, 5)
+	do
+		local _initFrac = math.clamp(
+			((player:GetAttribute("MusicVolume") or MusicSystemConfig.PLAYBACK.DefaultVolume) - MusicSystemConfig.PLAYBACK.MinVolume)
+			/ (MusicSystemConfig.PLAYBACK.MaxVolume - MusicSystemConfig.PLAYBACK.MinVolume), 0, 1)
+		E.volSliderFill = makeFrame({dim = UDim2.new(_initFrac, 0, 1, 0), bg = THEME.accent, bgT = 0, z = 105, name = "VolFill", parent = E.volSliderTrack})
+	end
+	Modules.UI.rounded(E.volSliderFill, 4)
 
-	E.volSliderDot = makeFrame({dim = UDim2.new(0, 16, 0, 16), pos = UDim2.new(1, -8, 0.5, -8), bg = THEME.text, bgT = 0, z = 106, name = "VolDot", parent = E.volSliderFill})
-	Modules.UI.rounded(E.volSliderDot, 8)
+	E.volSliderDot = makeFrame({dim = UDim2.new(0, 16, 0, 26), pos = UDim2.new(1, -8, 0.5, -13), bg = THEME.text, bgT = 0, z = 108, name = "VolDot", parent = E.volSliderFill})
+	Modules.UI.rounded(E.volSliderDot, 5)
 
 	E.volLabelText = makeLabel({dim = UDim2.new(0, 50, 1, 0), pos = UDim2.new(1, -58, 0, 0), text = "100%", color = THEME.text, font = Enum.Font.GothamBold, size = 14, alignX = Enum.TextXAlignment.Right, z = 104, parent = volFrame})
 
 	E.volInput = make("TextBox", {Size = UDim2.new(0, 50, 0, 30), Position = UDim2.new(1, -58, 0.5, -15), BackgroundColor3 = THEME.elevated, Text = "", TextColor3 = THEME.text, Font = Enum.Font.GothamBold, TextSize = 13, BorderSizePixel = 0, ZIndex = 107, Visible = false, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Center, Parent = volFrame})
 	Modules.UI.rounded(E.volInput, 6)
 
-	E.volSliderBtn = makeBtn({dim = UDim2.new(1, -120, 0, 24), pos = UDim2.new(0, 40, 0.5, -12), z = 108, name = "VolSliderBtn", parent = volFrame})
+	E.volSliderBtn = makeBtn({dim = UDim2.new(1, -120, 0, 30), pos = UDim2.new(0, 40, 0.5, -15), z = 108, name = "VolSliderBtn", parent = volFrame})
 	E.volSliderBtn.BackgroundTransparency = 1
 
 	-- Controls Row (Skip + Add by ID)
@@ -576,6 +591,12 @@ end
 E.libraryContent = makeFrame({dim = UDim2.new(1, 0, 1, 0), z = 100, clip = true, name = "LibraryContent", parent = contentArea})
 E.libraryContent.Visible = false
 
+E.mainTabs:register("Home", E.homeContent)
+E.mainTabs:register("Library", E.libraryContent)
+E.mainTabs.onSwitch = function(tabId)
+	S.activeTab = tabId
+end
+
 -- ═══ LIBRARY LEFT: Collections ═══
 do
 	local libLeft = makeFrame({dim = UDim2.new(LAY.LIB_LEFT_W, 0, 1, 0), bg = THEME.bg, bgT = THEME.lightAlpha, z = 100, name = "LibLeft", parent = E.libraryContent})
@@ -598,54 +619,67 @@ end
 
 -- ═══ LIBRARY RIGHT: Songs ═══
 do
+	local HEADER_H = 110
 	local libRight = makeFrame({dim = UDim2.new(LAY.LIB_RIGHT_W, 0, 1, 0), pos = UDim2.new(LAY.LIB_LEFT_W, 0, 0, 0), z = 100, clip = true, name = "LibRight", parent = E.libraryContent})
-	local songsHeader = makeFrame({dim = UDim2.new(1, -20, 0, 82), pos = UDim2.new(0, 10, 0, 4), z = 101, clip = true, parent = libRight})
 
-	E.songsTitle = makeLabel({text = "CANCIONES", font = Enum.Font.GothamBlack, size = 18, color = THEME.accent, dim = UDim2.new(1, -70, 0, 28), truncate = Enum.TextTruncate.AtEnd, alignX = Enum.TextXAlignment.Left, z = 102, name = "SongsTitle", parent = songsHeader})
-	E.songCountLabel = makeLabel({dim = UDim2.new(0, 65, 0, 28), pos = UDim2.new(1, -65, 0, 0), color = THEME.accent, font = Enum.Font.GothamBold, size = 12, alignX = Enum.TextXAlignment.Right, z = 102, visible = false, parent = songsHeader})
+	-- Header con fondo de DJ
+	local songsHeader = makeFrame({dim = UDim2.new(1, 0, 0, HEADER_H), pos = UDim2.new(0, 0, 0, 0), bg = THEME.card, bgT = 0, z = 101, clip = true, name = "SongsHeader", parent = libRight})
 
+	-- Cover de fondo del DJ (se actualiza en selectDJ)
+	E.libHeaderCover = makeImage({dim = UDim2.new(1, 0, 1, 0), image = "", scale = Enum.ScaleType.Crop, imageT = 0.2, z = 101, visible = false, name = "LibHeaderCover", parent = songsHeader})
+	-- Overlay oscuro
+	local headerOverlay = makeFrame({dim = UDim2.new(1, 0, 1, 0), bg = THEME.bg, bgT = 0.3, z = 102, name = "HeaderOverlay", parent = songsHeader})
+	-- Gradiente inferior para fundir con el contenido
+	local headerGrad = makeFrame({dim = UDim2.new(1, 0, 0.5, 0), pos = UDim2.new(0, 0, 0.5, 0), bg = THEME.card, bgT = 0, z = 103, parent = songsHeader})
+	make("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new{
+			NumberSequenceKeypoint.new(0, 1.0),
+			NumberSequenceKeypoint.new(1, 0.0),
+		},
+		Parent = headerGrad,
+	})
+
+	-- Textos del header (encima de todo)
+	E.songsTitle = makeLabel({text = "CANCIONES", font = Enum.Font.GothamBlack, size = 20, color = THEME.text, dim = UDim2.new(1, -30, 0, 24), pos = UDim2.new(0, 14, 0, 10), truncate = Enum.TextTruncate.AtEnd, alignX = Enum.TextXAlignment.Left, z = 105, name = "SongsTitle", parent = songsHeader})
+	E.libDJName = makeLabel({text = "", font = Enum.Font.GothamBold, size = 13, color = THEME.dim, dim = UDim2.new(1, -30, 0, 18), pos = UDim2.new(0, 14, 0, 34), truncate = Enum.TextTruncate.AtEnd, alignX = Enum.TextXAlignment.Left, z = 105, name = "LibDJName", parent = songsHeader})
+	E.songCountLabel = makeLabel({dim = UDim2.new(0, 80, 0, 24), pos = UDim2.new(1, -90, 0, 10), color = THEME.accent, font = Enum.Font.GothamBold, size = 12, alignX = Enum.TextXAlignment.Right, z = 105, visible = false, parent = songsHeader})
+
+	-- Search integrado — full width, fondo bg semitransparente, sin esquinas
 	local searchContainer
-	searchContainer, E.searchInput = Modules.SearchModern.new(songsHeader, {placeholder = "Buscar...", size = UDim2.new(1, 0, 0, 36), bg = THEME.card, corner = 10, z = 102, inputName = "SearchInput"})
-	searchContainer.Position = UDim2.new(0, 0, 0, 38)
-	searchContainer.Size = UDim2.new(1, -2, 0, 34)
+	searchContainer, E.searchInput = Modules.SearchModern.new(songsHeader, {placeholder = "Buscar cancion...", size = UDim2.new(1, 0, 0, 44), bg = THEME.bg, corner = 0, z = 105, inputName = "SearchInput", textSize = 16})
+	searchContainer.Position = UDim2.new(0, 0, 0, 66)
+	searchContainer.Size = UDim2.new(1, 0, 0, 44)
+	searchContainer.BackgroundTransparency = 0
+	searchContainer.ZIndex = 105
+	make("UIGradient", {
+		Rotation = 90,
+		Transparency = NumberSequence.new{
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.4, 0.5),
+			NumberSequenceKeypoint.new(0.75, 0.1),
+			NumberSequenceKeypoint.new(1, 0),
+		},
+		Parent = searchContainer,
+	})
 	if E.searchInput then
-		E.searchInput.TextSize = 14
+		E.searchInput.TextSize = 16
 		E.searchInput.Font = Enum.Font.GothamBold
-		E.searchInput.PlaceholderColor3 = THEME.dim
+		E.searchInput.PlaceholderColor3 = THEME.muted
 	end
 
 	E.songsScroll = make("ScrollingFrame", {
-		Size = UDim2.new(1, -20, 1, -96), Position = UDim2.new(0, 10, 0, 90),
+		Size = UDim2.new(1, -10, 1, -HEADER_H), Position = UDim2.new(0, 5, 0, HEADER_H),
 		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, ScrollBarImageTransparency = 1,
 		CanvasSize = UDim2.new(0, 0, 0, 0), ClipsDescendants = true, ZIndex = 101, Parent = libRight,
 	})
 	Modules.ModernScrollbar.setup(E.songsScroll, libRight, THEME, {transparency = 0})
 
 	E.songsContainer = makeFrame({name = "SongsContainer", dim = UDim2.new(1, 0, 0, 0), z = 101, parent = E.songsScroll})
+	make("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 12), Parent = E.songsScroll})
 	E.loadingIndicator = makeLabel({dim = UDim2.new(1, 0, 0, 40), text = "Cargando...", color = THEME.muted, size = 15, z = 102, visible = false, parent = E.songsScroll})
 	E.songsPlaceholder = makeLabel({dim = UDim2.new(1, -40, 0, 80), pos = UDim2.new(0, 20, 0.4, 0), text = "Elige una lista\npara ver canciones", color = THEME.muted, size = 16, wrap = true, z = 102, alignX = Enum.TextXAlignment.Center, name = "Placeholder", parent = libRight})
 end
-
--- ════════════════════════════════════════════════════════════════
--- TAB SWITCHING
--- ════════════════════════════════════════════════════════════════
-local function switchTab(tab)
-	S.activeTab = tab
-	if tab == "Home" then
-		E.homeContent.Visible = true; E.libraryContent.Visible = false
-		if E.tabIndicator then tw(E.tabIndicator, 0.22, {Position = UDim2.new(0, 2, 0, 2)}) end
-		E.tabHome.TextColor3 = THEME.text
-		E.tabLibrary.TextColor3 = THEME.dim
-	else
-		E.homeContent.Visible = false; E.libraryContent.Visible = true
-		if E.tabIndicator then tw(E.tabIndicator, 0.22, {Position = UDim2.new(0.5, 2, 0, 2)}) end
-		E.tabLibrary.TextColor3 = THEME.text
-		E.tabHome.TextColor3 = THEME.dim
-	end
-end
-
-E.tabHome.MouseButton1Click:Connect(function() switchTab("Home") end)
-E.tabLibrary.MouseButton1Click:Connect(function() switchTab("Library") end)
 
 -- ════════════════════════════════════════════════════════════════
 -- ADD BUTTON STATE MACHINE
@@ -818,7 +852,7 @@ local function beginVolumeDrag(input)
 	S.isDraggingVolume = true
 	S.volumeDragInput = (input and input.UserInputType == Enum.UserInputType.Touch) and input or nil
 	if E.volSliderDot then
-		tw(E.volSliderDot, 0.1, {Size = UDim2.new(0, 20, 0, 20), Position = UDim2.new(1, -10, 0.5, -10)})
+		tw(E.volSliderDot, 0.1, {Size = UDim2.new(0, 18, 0, 30), Position = UDim2.new(1, -9, 0.5, -15)})
 	end
 	local x = (input and input.Position and input.Position.X) or UserInputService:GetMouseLocation().X
 	updateVolumeFromPointer(x)
@@ -829,7 +863,7 @@ local function endVolumeDrag()
 	S.isDraggingVolume = false
 	S.volumeDragInput = nil
 	if E.volSliderDot then
-		tw(E.volSliderDot, 0.1, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(1, -8, 0.5, -8)})
+		tw(E.volSliderDot, 0.1, {Size = UDim2.new(0, 16, 0, 26), Position = UDim2.new(1, -8, 0.5, -13)})
 	end
 end
 
@@ -1305,6 +1339,33 @@ local function selectDJ(djName, djData, card)
 
 	E.searchInput.Text = ""; E.songCountLabel.Text = djData.songCount .. " canciones"; E.songCountLabel.Visible = true
 	E.songsPlaceholder.Visible = false; E.songsTitle.Text = "CANCIONES"
+	E.libDJName.Text = djName
+
+	-- Animar cover del header (crossfade)
+	if E.libHeaderCover then
+		local cover = djData.cover or ""
+		if cover ~= "" then
+			if E.libHeaderCover.Visible and E.libHeaderCover.Image ~= "" then
+				-- Crossfade: fade out, cambiar imagen, fade in
+				TweenService:Create(E.libHeaderCover, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {ImageTransparency = 1}):Play()
+				task.delay(0.2, function()
+					E.libHeaderCover.Image = cover
+					TweenService:Create(E.libHeaderCover, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {ImageTransparency = 0.2}):Play()
+				end)
+			else
+				-- Primera vez: fade in
+				E.libHeaderCover.Image = cover
+				E.libHeaderCover.ImageTransparency = 1
+				E.libHeaderCover.Visible = true
+				TweenService:Create(E.libHeaderCover, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {ImageTransparency = 0.2}):Play()
+			end
+		else
+			if E.libHeaderCover.Visible then
+				TweenService:Create(E.libHeaderCover, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {ImageTransparency = 1}):Play()
+				task.delay(0.25, function() E.libHeaderCover.Visible = false end)
+			end
+		end
+	end
 	releaseAllCards(); E.songsScroll.CanvasPosition = Vector2.new(0, 0)
 	E.loadingIndicator.Visible = true; E.loadingIndicator.Text = "Cargando canciones..."; E.loadingIndicator.Position = UDim2.new(0, 0, 0, 4)
 
@@ -1493,7 +1554,7 @@ for _ = 1, CFG.MAX_POOL_SIZE do
 	local card = createSongCard(); card.Parent = E.songsContainer; table.insert(S.cardPool, card)
 end
 
-switchTab("Home")
+E.mainTabs:select("Home")
 
 _G.OpenMusicUI = openUI
 _G.CloseMusicUI = closeUI
