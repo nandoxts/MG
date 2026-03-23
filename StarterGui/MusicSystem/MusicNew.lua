@@ -316,7 +316,29 @@ end
 
 -- ════════════════════════════════════════════════════════════════
 -- ROOT GUI
+-- Al morir, Roblox destruye este script y lo re-clona desde StarterGui.
+-- El ScreenGui viejo persiste (ResetOnSpawn=false) pero TODAS sus
+-- conexiones murieron con el script anterior → queda zombie.
+-- Solución: destruir el viejo, crear uno fresco con conexiones vivas.
 -- ════════════════════════════════════════════════════════════════
+do
+	local playerGui = player:WaitForChild("PlayerGui")
+	local old = playerGui:FindFirstChild("MusicDashboardUI")
+	if old then
+		-- Cerrar modal limpio antes de destruir (desconecta progress, visualizer, blur)
+		pcall(function() if _G.CloseMusicUI then _G.CloseMusicUI() end end)
+		-- Resetear GlobalModalManager para que no piense que Music sigue abierto
+		pcall(function() Modules.GlobalModalManager.currentMainModal = nil end)
+		-- Deseleccionar icono del TopBar
+		pcall(function() if _G.MusicDashboardIcon then _G.MusicDashboardIcon:deselect() end end)
+		-- Destruir ScreenGui viejo (zombie)
+		old:Destroy()
+		-- Limpiar globals stale
+		_G.OpenMusicUI = nil
+		_G.CloseMusicUI = nil
+	end
+end
+
 local screenGui = make("ScreenGui", {
 	Name = "MusicDashboardUI", ResetOnSpawn = false,
 	IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
