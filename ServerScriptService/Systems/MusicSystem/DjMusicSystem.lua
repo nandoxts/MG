@@ -625,39 +625,7 @@ playRandomSong = function()
 		return
 	end
 
-	-- FIX 2: Primero intentar canciones que YA están validadas en caché
-	-- Esto es instantáneo (0ms) en vez de 5s
-	local shuffled = {}
-	for i = #allSongs, 2, -1 do
-		local j = math.random(i)
-		allSongs[i], allSongs[j] = allSongs[j], allSongs[i]
-	end
-
-	-- Paso 1: Buscar entre las ya cacheadas como válidas (instantáneo)
-	for _, song in ipairs(allSongs) do
-		local cached = validationCache[song.id]
-		if cached and cached.canPlay and (tick() - cached.timestamp) < VALIDATION_CACHE_TTL then
-			local name, artist, metaOk = getOrLoadMetadata(song.id)
-			if metaOk then
-				table.insert(playQueue, {
-					id          = song.id,
-					name        = name,
-					artist      = artist,
-					userId      = DEV_USER_ID,
-					requestedBy = DEV_DISPLAY_NAME,
-					addedAt     = os.time(),
-					dj          = song.dj,
-					djCover     = song.djCover,
-					isAutoPlay  = true,
-				})
-				currentSongIndex = 1
-				task.delay(TRANSITION_DELAY, function() playSong(1) end)
-				return
-			end
-		end
-	end
-
-	-- Paso 2: Si no hay cacheadas, validar como antes (con el caché nuevo para futuras)
+	-- Selección puramente aleatoria sin sesgo por caché
 	for attempt = 1, MAX_RANDOM_RETRIES do
 		local randomSong = allSongs[math.random(#allSongs)]
 

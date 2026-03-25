@@ -74,6 +74,7 @@ local currentLeaderUserId = nil -- UserId del jugador que sigo (nil si no sigo a
 local CardConnections = {}
 local ActiveTweens = {}
 local GlobalConnections = {}
+local shimmerGen = 0
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- UTILIDADES
@@ -182,40 +183,105 @@ local function CleanupAllCards()
 	end
 	CardConnections = {}
 	ActiveTweens = {}
+	shimmerGen = shimmerGen + 1
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- ANIMACIÓN ACTIVA
 -- ════════════════════════════════════════════════════════════════════════════════
 
+-- Shared visual elements (reparented to active card - saves ~400 instances)
+local cardCornerRadius = IsMobile and 6 or 8
+
+local SharedShimmer = Instance.new("Frame")
+SharedShimmer.Name = "Shimmer"
+SharedShimmer.Size = UDim2.new(1, 0, 1, 0)
+SharedShimmer.BackgroundColor3 = Color3.new(1, 1, 1)
+SharedShimmer.BackgroundTransparency = 0
+SharedShimmer.BorderSizePixel = 0
+SharedShimmer.ZIndex = 6
+SharedShimmer.Visible = false
+CreateCorner(SharedShimmer, cardCornerRadius)
+
+local SharedShimmerGrad = Instance.new("UIGradient")
+SharedShimmerGrad.Rotation = 20
+SharedShimmerGrad.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.35, 1),
+	NumberSequenceKeypoint.new(0.5, 0.75),
+	NumberSequenceKeypoint.new(0.65, 1),
+	NumberSequenceKeypoint.new(1, 1),
+})
+SharedShimmerGrad.Offset = Vector2.new(-1, 0)
+SharedShimmerGrad.Parent = SharedShimmer
+
+local SharedOverlay = Instance.new("Frame")
+SharedOverlay.Name = "ActiveOverlay"
+SharedOverlay.Size = UDim2.new(1, 0, 1, 0)
+SharedOverlay.BackgroundColor3 = THEME_CONFIG.accent
+SharedOverlay.BackgroundTransparency = 1
+SharedOverlay.BorderSizePixel = 0
+SharedOverlay.ZIndex = 2
+CreateCorner(SharedOverlay, IsMobile and 5 or 8)
+
+local SharedBorder = Instance.new("UIStroke")
+SharedBorder.Name = "ActiveBorder"
+SharedBorder.Color = THEME_CONFIG.accent
+SharedBorder.Thickness = 2
+SharedBorder.Transparency = 1
+
+local function StartShimmer()
+	shimmerGen = shimmerGen + 1
+	local myGen = shimmerGen
+	SharedShimmer.Visible = true
+	SharedShimmerGrad.Offset = Vector2.new(-1, 0)
+
+	task.spawn(function()
+		while shimmerGen == myGen and SharedShimmer.Parent do
+			SharedShimmerGrad.Offset = Vector2.new(-1, 0)
+			local t = Tween(SharedShimmerGrad, 1.2, {Offset = Vector2.new(1, 0)}, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+			if t then t.Completed:Wait() end
+			if shimmerGen ~= myGen then break end
+			task.wait(2.5)
+		end
+		if shimmerGen == myGen then
+			SharedShimmer.Visible = false
+		end
+	end)
+end
+
+local function StopShimmer()
+	shimmerGen = shimmerGen + 1
+	SharedShimmer.Visible = false
+	SharedShimmerGrad.Offset = Vector2.new(-1, 0)
+end
+
+local function UnparentSharedEffects()
+	StopShimmer()
+	SharedShimmer.Parent = nil
+	SharedOverlay.Parent = nil
+	SharedBorder.Parent = nil
+end
+
 local function AplicarEfectoActivo(card)
 	if not card or not card.Parent then return end
-
-	local border = card:FindFirstChild("ActiveBorder")
-	local overlay = card:FindFirstChild("ActiveOverlay")
-
-	if border then
-		TrackTween(card, Tween(border, 0.12, {Transparency = 0, Thickness = 2}, Enum.EasingStyle.Quad))
-	end
-
-	if overlay then
-		TrackTween(card, Tween(overlay, 0.12, {BackgroundTransparency = 0.8}, Enum.EasingStyle.Quad))
-	end
+	SharedBorder.Parent = card
+	SharedBorder.Transparency = 1
+	SharedOverlay.Parent = card
+	SharedOverlay.BackgroundTransparency = 1
+	SharedShimmer.Parent = card
+	Tween(SharedBorder, 0.12, {Transparency = 0}, Enum.EasingStyle.Quad)
+	Tween(SharedOverlay, 0.12, {BackgroundTransparency = 0.8}, Enum.EasingStyle.Quad)
+	StartShimmer()
 end
 
 local function RemoverEfectoActivo(card)
-	if not card or not card.Parent then return end
-
-	local border = card:FindFirstChild("ActiveBorder")
-	local overlay = card:FindFirstChild("ActiveOverlay")
-
-	if border then
-		TrackTween(card, Tween(border, 0.08, {Transparency = 1, Thickness = 2}, Enum.EasingStyle.Quad))
-	end
-
-	if overlay then
-		TrackTween(card, Tween(overlay, 0.08, {BackgroundTransparency = 1}, Enum.EasingStyle.Quad))
-	end
+	StopShimmer()
+	SharedBorder.Transparency = 1
+	SharedOverlay.BackgroundTransparency = 1
+	SharedShimmer.Parent = nil
+	SharedOverlay.Parent = nil
+	SharedBorder.Parent = nil
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -858,8 +924,8 @@ end
 -- ════════════════════════════════════════════════════════════════════════════════
 -- CREAR TARJETA (con animación de favoritos mejorada)
 -- ════════════════════════════════════════════════════════════════════════════════
-local function CrearTarjeta(nombre, id, orden, ocultarFav)
-	local esFavorito = (not ocultarFav) and EstaEnFavoritos(id)
+local function CrearTarjeta(nombre, id, orden)
+	local esFavorito = EstaEnFavoritos(id)
 	local cardHeight = GetCardHeight()
 
 	-- Colores desde ThemeConfig
@@ -880,27 +946,9 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav)
 	card:SetAttribute("Name", nombre)
 	card:SetAttribute("IsFavorite", esFavorito)
 	card.Parent = ScrollFrame
+	card.ClipsDescendants = true
 
 	CreateCorner(card, IsMobile and 6 or 8)
-
-	-- Overlay para efecto activo
-	local activeOverlay = Instance.new("Frame")
-	activeOverlay.Name = "ActiveOverlay"
-	activeOverlay.Size = UDim2.new(1, 0, 1, 0)
-	activeOverlay.BackgroundColor3 = THEME_CONFIG.accent
-	activeOverlay.BackgroundTransparency = 1
-	activeOverlay.BorderSizePixel = 0
-	activeOverlay.ZIndex = 2
-	activeOverlay.Parent = card
-	CreateCorner(activeOverlay, IsMobile and 5 or 8)
-
-	-- Borde activo
-	local activeBorder = Instance.new("UIStroke")
-	activeBorder.Name = "ActiveBorder"
-	activeBorder.Color = THEME_CONFIG.accent
-	activeBorder.Thickness = 2
-	activeBorder.Transparency = 1
-	activeBorder.Parent = card
 
 	-- Nombre
 	local nameLabel = Instance.new("TextLabel")
@@ -938,12 +986,6 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav)
 	favBtn.ImageTransparency = esFavorito and 0 or 0.2
 	favBtn.ZIndex = 5
 	favBtn.Parent = favContainer
-
-	-- Ocultar botón favorito para poses/emotes
-	if ocultarFav then
-		favContainer.Visible = false
-		nameLabel.Size = UDim2.new(1, IsMobile and -8 or -12, 1, 0)
-	end
 
 	-- Variable para evitar clicks múltiples
 	local isProcessingFav = false
@@ -1081,6 +1123,7 @@ end
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local function LimpiarScroll()
+	UnparentSharedEffects()
 	CleanupAllCards()
 	CardCache = {} -- Limpiar caché
 
