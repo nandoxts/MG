@@ -66,7 +66,7 @@ local IsMobile = UserInputService.TouchEnabled
 local EmotesFavs = {}
 local DanceActivated = nil
 local ActiveCard = nil
-local TabActual = "DANCES"
+local TabActual = "POSES"
 local IsSynced = false -- Estado de sincronización
 local currentLeaderUserId = nil -- UserId del jugador que sigo (nil si no sigo a nadie)
 
@@ -74,7 +74,6 @@ local currentLeaderUserId = nil -- UserId del jugador que sigo (nil si no sigo a
 local CardConnections = {}
 local ActiveTweens = {}
 local GlobalConnections = {}
-local shimmerGen = 0
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- UTILIDADES
@@ -183,105 +182,40 @@ local function CleanupAllCards()
 	end
 	CardConnections = {}
 	ActiveTweens = {}
-	shimmerGen = shimmerGen + 1
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- ANIMACIÓN ACTIVA
 -- ════════════════════════════════════════════════════════════════════════════════
 
--- Shared visual elements (reparented to active card - saves ~400 instances)
-local cardCornerRadius = IsMobile and 6 or 8
-
-local SharedShimmer = Instance.new("Frame")
-SharedShimmer.Name = "Shimmer"
-SharedShimmer.Size = UDim2.new(1, 0, 1, 0)
-SharedShimmer.BackgroundColor3 = Color3.new(1, 1, 1)
-SharedShimmer.BackgroundTransparency = 0
-SharedShimmer.BorderSizePixel = 0
-SharedShimmer.ZIndex = 6
-SharedShimmer.Visible = false
-CreateCorner(SharedShimmer, cardCornerRadius)
-
-local SharedShimmerGrad = Instance.new("UIGradient")
-SharedShimmerGrad.Rotation = 20
-SharedShimmerGrad.Transparency = NumberSequence.new({
-	NumberSequenceKeypoint.new(0, 1),
-	NumberSequenceKeypoint.new(0.35, 1),
-	NumberSequenceKeypoint.new(0.5, 0.75),
-	NumberSequenceKeypoint.new(0.65, 1),
-	NumberSequenceKeypoint.new(1, 1),
-})
-SharedShimmerGrad.Offset = Vector2.new(-1, 0)
-SharedShimmerGrad.Parent = SharedShimmer
-
-local SharedOverlay = Instance.new("Frame")
-SharedOverlay.Name = "ActiveOverlay"
-SharedOverlay.Size = UDim2.new(1, 0, 1, 0)
-SharedOverlay.BackgroundColor3 = THEME_CONFIG.accent
-SharedOverlay.BackgroundTransparency = 1
-SharedOverlay.BorderSizePixel = 0
-SharedOverlay.ZIndex = 2
-CreateCorner(SharedOverlay, IsMobile and 5 or 8)
-
-local SharedBorder = Instance.new("UIStroke")
-SharedBorder.Name = "ActiveBorder"
-SharedBorder.Color = THEME_CONFIG.accent
-SharedBorder.Thickness = 2
-SharedBorder.Transparency = 1
-
-local function StartShimmer()
-	shimmerGen = shimmerGen + 1
-	local myGen = shimmerGen
-	SharedShimmer.Visible = true
-	SharedShimmerGrad.Offset = Vector2.new(-1, 0)
-
-	task.spawn(function()
-		while shimmerGen == myGen and SharedShimmer.Parent do
-			SharedShimmerGrad.Offset = Vector2.new(-1, 0)
-			local t = Tween(SharedShimmerGrad, 1.2, {Offset = Vector2.new(1, 0)}, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-			if t then t.Completed:Wait() end
-			if shimmerGen ~= myGen then break end
-			task.wait(2.5)
-		end
-		if shimmerGen == myGen then
-			SharedShimmer.Visible = false
-		end
-	end)
-end
-
-local function StopShimmer()
-	shimmerGen = shimmerGen + 1
-	SharedShimmer.Visible = false
-	SharedShimmerGrad.Offset = Vector2.new(-1, 0)
-end
-
-local function UnparentSharedEffects()
-	StopShimmer()
-	SharedShimmer.Parent = nil
-	SharedOverlay.Parent = nil
-	SharedBorder.Parent = nil
-end
-
 local function AplicarEfectoActivo(card)
 	if not card or not card.Parent then return end
-	SharedBorder.Parent = card
-	SharedBorder.Transparency = 1
-	SharedOverlay.Parent = card
-	SharedOverlay.BackgroundTransparency = 1
-	SharedShimmer.Parent = card
-	Tween(SharedBorder, 0.12, {Transparency = 0}, Enum.EasingStyle.Quad)
-	Tween(SharedOverlay, 0.12, {BackgroundTransparency = 0.8}, Enum.EasingStyle.Quad)
-	StartShimmer()
+
+	local border = card:FindFirstChild("ActiveBorder")
+	local overlay = card:FindFirstChild("ActiveOverlay")
+
+	if border then
+		TrackTween(card, Tween(border, 0.12, {Transparency = 0, Thickness = 2}, Enum.EasingStyle.Quad))
+	end
+
+	if overlay then
+		TrackTween(card, Tween(overlay, 0.12, {BackgroundTransparency = 0.8}, Enum.EasingStyle.Quad))
+	end
 end
 
 local function RemoverEfectoActivo(card)
-	StopShimmer()
-	SharedBorder.Transparency = 1
-	SharedOverlay.BackgroundTransparency = 1
-	SharedShimmer.Parent = nil
-	SharedOverlay.Parent = nil
-	SharedBorder.Parent = nil
+	if not card or not card.Parent then return end
+
+	local border = card:FindFirstChild("ActiveBorder")
+	local overlay = card:FindFirstChild("ActiveOverlay")
+
+	if border then
+		TrackTween(card, Tween(border, 0.08, {Transparency = 1, Thickness = 2}, Enum.EasingStyle.Quad))
+	end
+
+	if overlay then
+		TrackTween(card, Tween(overlay, 0.08, {BackgroundTransparency = 1}, Enum.EasingStyle.Quad))
+	end
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -375,11 +309,12 @@ local tabHeight = IsMobile and 38 or 46
 
 local subTabs = SubTabs.new(ContentCanvas, THEME_CONFIG, {
 	tabs = {
+		{ id = "POSES",     label = "POSES"     },
 		{ id = "DANCES",    label = "DANCES"    },
 		{ id = "FAVORITOS", label = "FAVS" },
 	},
 	height = tabHeight,
-	default = "DANCES",
+	default = "POSES",
 	textSize = IsMobile and 13 or 15,
 })
 
@@ -593,6 +528,52 @@ local MAX_SPEED      = 1.9
 local currentSpeed   = 1.0
 local isDraggingSlider = false
 
+-- ════════════════════════════════════════════════════════════════════════════════
+-- BOTÓN STOP (encima del slider, visible solo con baile activo)
+-- ════════════════════════════════════════════════════════════════════════════════
+
+local stopBtnHeight = IsMobile and 26 or 30
+
+local StopButton = Instance.new("TextButton")
+StopButton.Name = "StopButton"
+StopButton.Size = UDim2.new(1, 0, 0, stopBtnHeight)
+StopButton.Position = UDim2.new(0, 0, 1, -(sliderHeight + stopBtnHeight))
+StopButton.BackgroundColor3 = THEME_CONFIG.card
+StopButton.BackgroundTransparency = 0
+StopButton.BorderSizePixel = 0
+StopButton.Text = "STOP"
+StopButton.Font = Enum.Font.GothamBold
+StopButton.TextSize = IsMobile and 14 or 16
+StopButton.TextColor3 = THEME_CONFIG.accent
+StopButton.AutoButtonColor = false
+StopButton.ZIndex = 5
+StopButton.Visible = false
+StopButton.Parent = ContentCanvas
+
+local stopDivider = Instance.new("Frame")
+stopDivider.Name = "StopDivider"
+stopDivider.Size = UDim2.new(1, 0, 0, 1)
+stopDivider.Position = UDim2.new(0, 0, 0, 0)
+stopDivider.BackgroundColor3 = THEME_CONFIG.stroke
+stopDivider.BackgroundTransparency = 0.4
+stopDivider.BorderSizePixel = 0
+stopDivider.ZIndex = 5
+stopDivider.Parent = StopButton
+
+StopButton.MouseEnter:Connect(function()
+	Tween(StopButton, 0.07, {BackgroundColor3 = THEME_CONFIG.elevated, TextColor3 = THEME_CONFIG.text}, Enum.EasingStyle.Quad)
+end)
+StopButton.MouseLeave:Connect(function()
+	Tween(StopButton, 0.07, {BackgroundColor3 = THEME_CONFIG.card, TextColor3 = THEME_CONFIG.accent}, Enum.EasingStyle.Quad)
+end)
+
+local function ShowStopButton(show)
+	StopButton.Visible = show
+	-- Ajustar ContentArea para dar espacio al botón stop
+	local extra = show and stopBtnHeight or 0
+	ContentArea.Size = UDim2.new(1, 0, 1, -(posY + sliderHeight + extra))
+end
+
 local SpeedContainer = Instance.new("Frame")
 SpeedContainer.Name = "SpeedContainer"
 SpeedContainer.Size = UDim2.new(1, 0, 0, sliderHeight)
@@ -780,9 +761,11 @@ local function setActiveByName(nombre)
 		ActiveCard = card
 		DanceActivated = nombre
 		AplicarEfectoActivo(card)
+		if StopButton then ShowStopButton(true) end
 	else
 		-- Guardar nombre para cuando se carguen las tarjetas
 		DanceActivated = nombre
+		if StopButton then ShowStopButton(true) end
 	end
 end
 
@@ -792,6 +775,9 @@ local function clearActive()
 	end
 	ActiveCard = nil
 	DanceActivated = nil
+	if StopButton then
+		ShowStopButton(false)
+	end
 end
 
 -- Escuchar eventos del servidor (con debouncing integrado)
@@ -896,6 +882,14 @@ if SyncBroadcast and SyncBroadcast.IsA and SyncBroadcast:IsA("RemoteEvent") then
 	end))
 end
 
+-- Click en botón STOP
+StopButton.MouseButton1Click:Connect(function()
+	if DanceActivated then
+		StopAnimationRemote:FireServer()
+		clearActive()
+	end
+end)
+
 local ContentPadding = Instance.new("UIPadding")
 ContentPadding.PaddingTop = UDim.new(0, IsMobile and 2 or 4)
 ContentPadding.PaddingBottom = UDim.new(0, IsMobile and 4 or 10)
@@ -924,8 +918,8 @@ end
 -- ════════════════════════════════════════════════════════════════════════════════
 -- CREAR TARJETA (con animación de favoritos mejorada)
 -- ════════════════════════════════════════════════════════════════════════════════
-local function CrearTarjeta(nombre, id, orden)
-	local esFavorito = EstaEnFavoritos(id)
+local function CrearTarjeta(nombre, id, orden, ocultarFav)
+	local esFavorito = (not ocultarFav) and EstaEnFavoritos(id)
 	local cardHeight = GetCardHeight()
 
 	-- Colores desde ThemeConfig
@@ -946,9 +940,27 @@ local function CrearTarjeta(nombre, id, orden)
 	card:SetAttribute("Name", nombre)
 	card:SetAttribute("IsFavorite", esFavorito)
 	card.Parent = ScrollFrame
-	card.ClipsDescendants = true
 
 	CreateCorner(card, IsMobile and 6 or 8)
+
+	-- Overlay para efecto activo
+	local activeOverlay = Instance.new("Frame")
+	activeOverlay.Name = "ActiveOverlay"
+	activeOverlay.Size = UDim2.new(1, 0, 1, 0)
+	activeOverlay.BackgroundColor3 = THEME_CONFIG.accent
+	activeOverlay.BackgroundTransparency = 1
+	activeOverlay.BorderSizePixel = 0
+	activeOverlay.ZIndex = 2
+	activeOverlay.Parent = card
+	CreateCorner(activeOverlay, IsMobile and 5 or 8)
+
+	-- Borde activo
+	local activeBorder = Instance.new("UIStroke")
+	activeBorder.Name = "ActiveBorder"
+	activeBorder.Color = THEME_CONFIG.accent
+	activeBorder.Thickness = 2
+	activeBorder.Transparency = 1
+	activeBorder.Parent = card
 
 	-- Nombre
 	local nameLabel = Instance.new("TextLabel")
@@ -987,6 +999,12 @@ local function CrearTarjeta(nombre, id, orden)
 	favBtn.ZIndex = 5
 	favBtn.Parent = favContainer
 
+	-- Ocultar botón favorito para poses/emotes
+	if ocultarFav then
+		favContainer.Visible = false
+		nameLabel.Size = UDim2.new(1, IsMobile and -8 or -12, 1, 0)
+	end
+
 	-- Variable para evitar clicks múltiples
 	local isProcessingFav = false
 
@@ -1008,23 +1026,16 @@ local function CrearTarjeta(nombre, id, orden)
 			return
 		end
 
-		if DanceActivated == nombre then
-			-- STOP: detener baile sin resetear velocidad
-			DanceActivated = nil
-			StopAnimationRemote:FireServer()
-			RemoverEfectoActivo(card)
-			ActiveCard = nil
-		else
-			-- CAMBIO de baile: mantener velocidad actual sin resetear
-			if ActiveCard and ActiveCard.Parent then
-				RemoverEfectoActivo(ActiveCard)
-			end
-
-			DanceActivated = nombre
-			ActiveCard = card
-			PlayAnimationRemote:FireServer("playAnim", nombre, currentSpeed)
-			AplicarEfectoActivo(card)
+		-- Siempre reproducir/cambiar baile (el stop se hace con el botón STOP)
+		if ActiveCard and ActiveCard.Parent then
+			RemoverEfectoActivo(ActiveCard)
 		end
+
+		DanceActivated = nombre
+		ActiveCard = card
+		PlayAnimationRemote:FireServer("playAnim", nombre, currentSpeed)
+		AplicarEfectoActivo(card)
+		ShowStopButton(true)
 	end))
 
 	-- Click favorito
@@ -1123,7 +1134,6 @@ end
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local function LimpiarScroll()
-	UnparentSharedEffects()
 	CleanupAllCards()
 	CardCache = {} -- Limpiar caché
 
@@ -1145,6 +1155,32 @@ local function RestaurarBaileActivo()
 		ActiveCard = card
 		AplicarEfectoActivo(card)
 	end
+end
+
+local function CargarPoses(filtro)
+	LimpiarScroll()
+
+	filtro = (filtro or ""):lower()
+	local orden = 1
+	local hayVisibles = false
+
+	local function pasaFiltro(nombre)
+		return filtro == "" or nombre:lower():find(filtro, 1, true)
+	end
+
+	for _, v in ipairs(Modulo.Emotes or {}) do
+		if pasaFiltro(v.Nombre) then
+			CrearTarjeta(v.Nombre, v.ID, orden, true)
+			orden = orden + 1
+			hayVisibles = true
+		end
+	end
+
+	if not hayVisibles then
+		MostrarEmptyMessage(true, filtro ~= "" and "Sin resultados" or "Sin poses aún")
+	end
+
+	RestaurarBaileActivo()
 end
 
 local function CargarDances(filtro)
@@ -1203,7 +1239,9 @@ end
 subTabs.onSwitch = function(tabId)
 	TabActual = tabId
 	local filtro = SearchBox and SearchBox.Text or ""
-	if tabId == "DANCES" then
+	if tabId == "POSES" then
+		CargarPoses(filtro)
+	elseif tabId == "DANCES" then
 		CargarDances(filtro)
 	else
 		CargarFavoritos(filtro)
@@ -1220,7 +1258,9 @@ if SearchBox then
 		if searchDebounce then return end
 		searchDebounce = true
 		task.delay(0.25, function()
-			if TabActual == "DANCES" then
+			if TabActual == "POSES" then
+				CargarPoses(SearchBox.Text)
+			elseif TabActual == "DANCES" then
 				CargarDances(SearchBox.Text)
 			else
 				CargarFavoritos(SearchBox.Text)
@@ -1290,6 +1330,15 @@ task.spawn(function()
 			table.insert(preloadList, a)
 		end
 	end
+	if Modulo.Emotes then
+		for _, v in ipairs(Modulo.Emotes) do
+			if v.ID and v.ID ~= 0 then
+				local a = Instance.new("Animation")
+				a.AnimationId = "rbxassetid://" .. tostring(v.ID)
+				table.insert(preloadList, a)
+			end
+		end
+	end
 	pcall(function()
 		ContentProvider:PreloadAsync(preloadList)
 	end)
@@ -1297,7 +1346,7 @@ end)
 
 local ok, favs = pcall(function() return ObtenerFavs:InvokeServer() end)
 EmotesFavs = (ok and favs) or {}
-CargarDances()
+CargarPoses()
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- GLOBAL FUNCTIONS (Para TOPBAR.lua)
