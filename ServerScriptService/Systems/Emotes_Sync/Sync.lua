@@ -93,7 +93,18 @@ local function InitializeDanceCache()
 		obj.AnimationId = assetId
 		table.insert(PreloadAssets, obj)
 	end
-
+	-- Emotes / Poses (sin favoritos)
+	if Animaciones.Emotes then
+		for _, anim in pairs(Animaciones.Emotes) do
+			if anim.ID and anim.ID ~= 0 then
+				local assetId = "rbxassetid://" .. tostring(anim.ID)
+				DanceCache[anim.Nombre] = assetId
+				local obj = Instance.new("Animation")
+				obj.AnimationId = assetId
+				table.insert(PreloadAssets, obj)
+			end
+		end
+	end
 end
 InitializeDanceCache()
 
