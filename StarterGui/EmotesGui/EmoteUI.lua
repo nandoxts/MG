@@ -10,6 +10,7 @@
 -- CONFIGURACIÓN
 -- ════════════════════════════════════════════════════════════════════════════════
 
+
 local Config = {
 	PC_Ancho = 240,
 	PC_Alto = 470,
@@ -497,25 +498,77 @@ end)
 
 -- Nota: el cliente ya no usa valores en el Character; escucha `SyncUpdate` desde el servidor
 
-local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Name = "ScrollFrame"
-ScrollFrame.Size = UDim2.new(1, 0, 1, 0)
-ScrollFrame.BackgroundTransparency = 1
-ScrollFrame.BorderSizePixel = 0
-ScrollFrame.ScrollBarThickness = 0 -- Ocultar scrollbar tradicional
-ScrollFrame.ScrollBarImageTransparency = 1
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-ScrollFrame.Parent = ContentArea
+-- ════════════════════════════════════════════════════════════════════════════════
+-- SCROLL FRAMES (uno por pestaña — evita recrear listas fijas al cambiar tab)
+-- ════════════════════════════════════════════════════════════════════════════════
 
-ModernScrollbar.setup(ScrollFrame, ContentArea, THEME_CONFIG, { color = THEME_CONFIG.accent, offset = -6, transparency = 0 })
+local function CrearScrollFrame(nombre)
+	local sf = Instance.new("ScrollingFrame")
+	sf.Name = nombre
+	sf.Size = UDim2.new(1, 0, 1, 0)
+	sf.BackgroundTransparency = 1
+	sf.BorderSizePixel = 0
+	sf.ScrollBarThickness = 0
+	sf.ScrollBarImageTransparency = 1
+	sf.CanvasSize = UDim2.new(0, 0, 0, 0)
+	sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	sf.ScrollingDirection = Enum.ScrollingDirection.Y
+	sf.Parent = ContentArea
 
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ListLayout.Padding = UDim.new(0, IsMobile and 3 or 6)
-ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-ListLayout.Parent = ScrollFrame
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, IsMobile and 3 or 6)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	layout.Parent = sf
+
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, IsMobile and 2 or 4)
+	pad.PaddingBottom = UDim.new(0, IsMobile and 4 or 10)
+	pad.PaddingLeft = UDim.new(0, IsMobile and 4 or 6)
+	pad.PaddingRight = UDim.new(0, IsMobile and 4 or 6)
+	pad.Parent = sf
+
+	local emptyMsg = Instance.new("TextLabel")
+	emptyMsg.Name = "EmptyMessage"
+	emptyMsg.Size = UDim2.new(0, 0, 0, 0)
+	emptyMsg.BackgroundTransparency = 1
+	emptyMsg.Font = Enum.Font.GothamMedium
+	emptyMsg.Text = "Sin favoritos\nToca el ícono en cualquier baile"
+	emptyMsg.TextColor3 = THEME_CONFIG.subtle
+	emptyMsg.TextSize = IsMobile and 13 or 15
+	emptyMsg.Visible = false
+	emptyMsg.LayoutOrder = 999
+	emptyMsg.Parent = sf
+
+	ModernScrollbar.setup(sf, ContentArea, THEME_CONFIG, { color = THEME_CONFIG.accent, offset = -6, transparency = 0 })
+
+	return sf, emptyMsg
+end
+
+local ScrollPoses,  EmptyPoses  = CrearScrollFrame("ScrollPoses")
+local ScrollDances, EmptyDances = CrearScrollFrame("ScrollDances")
+local ScrollFavs,   EmptyFavs   = CrearScrollFrame("ScrollFavs")
+
+-- Ocultar tabs inactivos al inicio (ModernScrollbar sincroniza su mirror automáticamente)
+ScrollDances.Visible = false
+ScrollFavs.Visible   = false
+
+local ActiveScroll = ScrollPoses
+local ActiveEmpty  = EmptyPoses
+
+local function ShowTab(newTabId)
+	-- Ocultar pestaña actual
+	local sfMap = { POSES = ScrollPoses, DANCES = ScrollDances, FAVORITOS = ScrollFavs }
+	local emMap = { POSES = EmptyPoses,  DANCES = EmptyDances,  FAVORITOS = EmptyFavs  }
+	if sfMap[TabActual] then sfMap[TabActual].Visible = false end
+	-- Mostrar nueva
+	local sf = sfMap[newTabId]
+	if sf then
+		sf.Visible  = true
+		ActiveScroll = sf
+		ActiveEmpty  = emMap[newTabId]
+	end
+end
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- SLIDER DE VELOCIDAD
@@ -717,13 +770,25 @@ local CardCache = {} -- Caché: nombre -> card reference
 local lastActiveUpdate = 0
 local activeUpdateDebounce = 0.1 -- 100ms debounce
 
--- Actualizar caché cuando se cargan tarjetas
+-- Filtro activo por pestaña: nil = no cargado aún, string = filtro aplicado
+local PosesFilter  = nil
+local DancesFilter = nil
+
+-- Actualizar caché: ActiveScroll tiene prioridad para resolver duplicados entre tabs
 local function UpdateCardCache()
 	CardCache = {}
-	for _, child in ipairs(ScrollFrame:GetChildren()) do
+	for _, child in ipairs(ActiveScroll:GetChildren()) do
 		local cardName = child:GetAttribute("Name")
-		if cardName then
-			CardCache[cardName] = child
+		if cardName then CardCache[cardName] = child end
+	end
+	for _, sf in ipairs({ScrollPoses, ScrollDances, ScrollFavs}) do
+		if sf ~= ActiveScroll then
+			for _, child in ipairs(sf:GetChildren()) do
+				local cardName = child:GetAttribute("Name")
+				if cardName and not CardCache[cardName] then
+					CardCache[cardName] = child
+				end
+			end
 		end
 	end
 end
@@ -742,14 +807,17 @@ local function setActiveByName(nombre)
 	-- Usar caché primero (muy rápido)
 	local card = CardCache[nombre]
 
-	-- Si no está en caché, buscar y actualizar caché
+	-- Si no está en caché, buscar en todos los frames (activo primero)
 	if not card then
-		for _, child in ipairs(ScrollFrame:GetChildren()) do
-			if child:GetAttribute("Name") == nombre then
-				card = child
-				CardCache[nombre] = card
-				break
+		for _, sf in ipairs({ActiveScroll, ScrollPoses, ScrollDances, ScrollFavs}) do
+			for _, child in ipairs(sf:GetChildren()) do
+				if child:GetAttribute("Name") == nombre then
+					card = child
+					CardCache[nombre] = card
+					break
+				end
 			end
+			if card then break end
 		end
 	end
 
@@ -890,35 +958,140 @@ StopButton.MouseButton1Click:Connect(function()
 	end
 end)
 
-local ContentPadding = Instance.new("UIPadding")
-ContentPadding.PaddingTop = UDim.new(0, IsMobile and 2 or 4)
-ContentPadding.PaddingBottom = UDim.new(0, IsMobile and 4 or 10)
-ContentPadding.PaddingLeft = UDim.new(0, IsMobile and 4 or 6)
-ContentPadding.PaddingRight = UDim.new(0, IsMobile and 4 or 6)
-ContentPadding.Parent = ScrollFrame
-
-local EmptyMessage = Instance.new("TextLabel")
-EmptyMessage.Name = "EmptyMessage"
-EmptyMessage.Size = UDim2.new(0, 0, 0, 0)
-EmptyMessage.BackgroundTransparency = 1
-EmptyMessage.Font = Enum.Font.GothamMedium
-EmptyMessage.Text = "Sin favoritos\nToca el ícono en cualquier baile"
-EmptyMessage.TextColor3 = THEME_CONFIG.subtle
-EmptyMessage.TextSize = IsMobile and 13 or 15
-EmptyMessage.Visible = false
-EmptyMessage.LayoutOrder = 999
-EmptyMessage.Parent = ScrollFrame
-
 local function MostrarEmptyMessage(mostrar, texto)
-	if texto then EmptyMessage.Text = texto end
-	EmptyMessage.Visible = mostrar
-	EmptyMessage.Size = mostrar and UDim2.new(1, 0, 0, 60) or UDim2.new(0, 0, 0, 0)
+	if not ActiveEmpty then return end
+	if texto then ActiveEmpty.Text = texto end
+	ActiveEmpty.Visible = mostrar
+	ActiveEmpty.Size = mostrar and UDim2.new(1, 0, 0, 60) or UDim2.new(0, 0, 0, 0)
+end
+
+-- Iconos de favorito (constantes)
+local FAV_ICON   = "rbxassetid://75212439359134"
+local NOFAV_ICON = "rbxassetid://72553305447429"
+
+-- Lock global por ID (evita doble click en cards del mismo baile en distintas tabs)
+local FavLocks = {}
+
+-- Aplica estado de favorito al botón
+local function ApplyFavBtnState(btn, isFav)
+	if not btn then return end
+	btn.Image = isFav and FAV_ICON or NOFAV_ICON
+	btn.ImageColor3 = THEME_CONFIG.accent
+	btn.ImageTransparency = isFav and 0 or THEME_CONFIG.lightAlpha
+end
+
+-- Sincroniza el icono de favorito en TODOS los frames para un ID dado
+local function SyncFavAcrossTabs(id, isFav)
+	for _, sf in ipairs({ScrollPoses, ScrollDances, ScrollFavs}) do
+		for _, child in ipairs(sf:GetChildren()) do
+			if child:GetAttribute("ID") == id then
+				child:SetAttribute("IsFavorite", isFav)
+				local fc = child:FindFirstChild("FavContainer")
+				ApplyFavBtnState(fc and fc:FindFirstChild("FavBtn"), isFav)
+			end
+		end
+	end
+end
+
+-- Anima la card de FAVORITOS y la destruye (al quitar fav)
+local function ShrinkAndDestroy(card)
+	if not (card and card.Parent) then return end
+	CleanupCard(card)
+	Tween(card, 0.2, {BackgroundTransparency = 0.8})
+	local shrink = Tween(card, 0.2, {Size = UDim2.new(1, 0, 0, 0)}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	if shrink then
+		shrink.Completed:Connect(function()
+			if card and card.Parent then card:Destroy() end
+		end)
+	elseif card and card.Parent then
+		card:Destroy()
+	end
+end
+
+-- Destruye TODAS las cards con un ID dado en un scroll
+local function RemoveCardFromScroll(sf, id, animate)
+	for _, child in ipairs(sf:GetChildren()) do
+		if child:GetAttribute("ID") == id and child:GetAttribute("Entry") then
+			if child == ActiveCard then ActiveCard = nil end
+			if animate then
+				ShrinkAndDestroy(child)
+			else
+				CleanupCard(child)
+				child:Destroy()
+			end
+		end
+	end
+end
+
+-- Toggle de favorito: estado optimista + servidor + reconciliación
+local function ToggleFavorite(id, nombre, sourceCard)
+	if FavLocks[id] then return end
+	FavLocks[id] = true
+
+	local wasFav   = EstaEnFavoritos(id)
+	local nextFav  = not wasFav
+
+	-- 1. UI optimista: actualizar todas las cards y el array local
+	if nextFav then
+		table.insert(EmotesFavs, id)
+	else
+		local idx = table.find(EmotesFavs, id)
+		if idx then table.remove(EmotesFavs, idx) end
+	end
+	SyncFavAcrossTabs(id, nextFav)
+
+	-- 2. Quitar card de FAVS si corresponde
+	if not nextFav then
+		local animate = (TabActual == "FAVORITOS")
+		RemoveCardFromScroll(ScrollFavs, id, animate)
+		if #EmotesFavs == 0 and TabActual == "FAVORITOS" then
+			MostrarEmptyMessage(true, "Sin favoritos\nToca el ícono en cualquier baile")
+		end
+	end
+
+	-- 3. Servidor (en background): si falla o devuelve estado contrario, revertir
+	task.spawn(function()
+		local ok, status = pcall(function()
+			return AnadirFav:InvokeServer(id)
+		end)
+
+		local serverFav
+		if ok and status == "Anadido" then serverFav = true
+		elseif ok and status == "Eliminada" then serverFav = false
+		end
+
+		if not ok then
+			-- Error de red: revertir
+			if nextFav then
+				local idx = table.find(EmotesFavs, id)
+				if idx then table.remove(EmotesFavs, idx) end
+			else
+				table.insert(EmotesFavs, id)
+			end
+			SyncFavAcrossTabs(id, wasFav)
+			NotificationSystem:Error("Error", "Sin conexión", 2)
+		elseif serverFav ~= nil and serverFav ~= nextFav then
+			-- Servidor estaba en estado distinto (desync): forzar el del servidor
+			if serverFav then
+				if not table.find(EmotesFavs, id) then table.insert(EmotesFavs, id) end
+			else
+				local idx = table.find(EmotesFavs, id)
+				if idx then table.remove(EmotesFavs, idx) end
+			end
+			SyncFavAcrossTabs(id, serverFav)
+		else
+			-- OK: notificar
+			NotificationSystem:Success("Favorito", nombre .. (nextFav and " añadido" or " quitado"), 2)
+		end
+
+		FavLocks[id] = nil
+	end)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- CREAR TARJETA (con animación de favoritos mejorada)
 -- ════════════════════════════════════════════════════════════════════════════════
-local function CrearTarjeta(nombre, id, orden, ocultarFav)
+local function CrearTarjeta(nombre, id, orden, ocultarFav, targetScroll)
 	local esFavorito = (not ocultarFav) and EstaEnFavoritos(id)
 	local cardHeight = GetCardHeight()
 
@@ -939,7 +1112,7 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav)
 	card:SetAttribute("ID", id)
 	card:SetAttribute("Name", nombre)
 	card:SetAttribute("IsFavorite", esFavorito)
-	card.Parent = ScrollFrame
+	card.Parent = targetScroll or ActiveScroll
 
 	CreateCorner(card, IsMobile and 6 or 8)
 
@@ -992,12 +1165,9 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav)
 	favBtn.Name = "FavBtn"
 	favBtn.Size = UDim2.new(1, 0, 1, 0)
 	favBtn.BackgroundTransparency = 1
-	-- Assets diferentes: sin favorito (72553305447429) vs con favorito (75212439359134)
-	favBtn.Image = esFavorito and "rbxassetid://75212439359134" or "rbxassetid://72553305447429"
-	favBtn.ImageColor3 = THEME_CONFIG.accent
-	favBtn.ImageTransparency = esFavorito and 0 or 0.2
 	favBtn.ZIndex = 5
 	favBtn.Parent = favContainer
+	ApplyFavBtnState(favBtn, esFavorito)
 
 	-- Ocultar botón favorito para poses/emotes
 	if ocultarFav then
@@ -1005,8 +1175,8 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav)
 		nameLabel.Size = UDim2.new(1, IsMobile and -8 or -12, 1, 0)
 	end
 
-	-- Variable para evitar clicks múltiples
-	local isProcessingFav = false
+	-- Variable para evitar clicks múltiples en la card (separado del lock global de fav)
+	local isProcessingClick = false
 
 	-- Hover en tarjeta
 	TrackConnection(card, card.MouseEnter:Connect(function()
@@ -1019,15 +1189,10 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav)
 
 	-- Click tarjeta (reproducir baile)
 	TrackConnection(card, card.MouseButton1Click:Connect(function()
-		if isProcessingFav then return end
+		if isProcessingClick or IsSynced then return end
+		isProcessingClick = true
 
-		-- Bloquear si está sincronizado
-		if IsSynced then
-			return
-		end
-
-		-- Siempre reproducir/cambiar baile (el stop se hace con el botón STOP)
-		if ActiveCard and ActiveCard.Parent then
+		if ActiveCard and ActiveCard.Parent and ActiveCard ~= card then
 			RemoverEfectoActivo(ActiveCard)
 		end
 
@@ -1036,94 +1201,13 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav)
 		PlayAnimationRemote:FireServer("playAnim", nombre, currentSpeed)
 		AplicarEfectoActivo(card)
 		ShowStopButton(true)
+
+		task.delay(0.1, function() isProcessingClick = false end)
 	end))
 
-	-- Click favorito
+	-- Click favorito (delegado a ToggleFavorite con lock global por ID)
 	TrackConnection(card, favBtn.MouseButton1Click:Connect(function()
-		if isProcessingFav then return end
-		isProcessingFav = true
-
-		-- Feedback visual inmediato
-		Tween(favBtn, 0.1, {ImageTransparency = esFavorito and 0.5 or 0})
-
-		local success, status = pcall(function()
-			return AnadirFav:InvokeServer(id)
-		end)
-
-		if not success then
-			isProcessingFav = false
-			NotificationSystem:Error("Error", "Error de conexión", 2)
-			return
-		end
-
-		if status == "Anadido" then
-			table.insert(EmotesFavs, id)
-			card:SetAttribute("IsFavorite", true)
-
-			Tween(favBtn, 0.2, {ImageColor3 = THEME_CONFIG.accent, ImageTransparency = 0})
-			favBtn.Image = "rbxassetid://75212439359134"
-
-			-- Sincronizar otras cards con el mismo ID
-			for _, child in ipairs(ScrollFrame:GetChildren()) do
-				if child:GetAttribute("ID") == id and child ~= card then
-					local innerBtn = child:FindFirstChild("FavContainer"):FindFirstChild("FavBtn")
-					if innerBtn then
-						innerBtn.Image = "rbxassetid://75212439359134"
-						innerBtn.ImageColor3 = THEME_CONFIG.accent
-						innerBtn.ImageTransparency = 0
-					end
-				end
-			end
-
-			NotificationSystem:Success("Favorito", nombre .. " añadido", 2)
-
-		elseif status == "Eliminada" then
-			local idx = table.find(EmotesFavs, id)
-			if idx then table.remove(EmotesFavs, idx) end
-			card:SetAttribute("IsFavorite", false)
-
-			if TabActual == "FAVORITOS" then
-				Tween(favBtn, 0.2, {ImageColor3 = THEME_CONFIG.accent, ImageTransparency = THEME_CONFIG.lightAlpha})
-
-				CleanupCard(card)
-
-				Tween(card, 0.25, {BackgroundTransparency = 0.8})
-				task.delay(0.1, function()
-					if card and card.Parent then
-						local shrink = Tween(card, 0.2, {
-							Size = UDim2.new(1, 0, 0, 0)
-						}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-
-						if shrink then
-							shrink.Completed:Connect(function()
-								if card and card.Parent then card:Destroy() end
-								if #EmotesFavs == 0 then
-									MostrarEmptyMessage(true, "Sin favoritos\nToca el ícono en cualquier baile")
-								end
-							end)
-						end
-					end
-				end)
-			else
-				Tween(favBtn, 0.2, {ImageColor3 = THEME_CONFIG.accent, ImageTransparency = THEME_CONFIG.lightAlpha})
-				favBtn.Image = "rbxassetid://72553305447429"
-				-- Sincronizar otras cards
-				for _, child in ipairs(ScrollFrame:GetChildren()) do
-					if child:GetAttribute("ID") == id and child ~= card then
-						local innerBtn = child:FindFirstChild("FavContainer"):FindFirstChild("FavBtn")
-						if innerBtn then
-							innerBtn.Image = "rbxassetid://72553305447429"
-							innerBtn.ImageColor3 = THEME_CONFIG.accent
-							innerBtn.ImageTransparency = THEME_CONFIG.lightAlpha
-						end
-					end
-				end
-			end
-
-			NotificationSystem:Success("Favorito", nombre .. " quitado", 2)
-		end
-
-		task.delay(0.3, function() isProcessingFav = false end)
+		ToggleFavorite(id, nombre, card)
 	end))
 
 	return card
@@ -1133,34 +1217,43 @@ end
 -- CARGAR CONTENIDO
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local function LimpiarScroll()
-	CleanupAllCards()
-	CardCache = {} -- Limpiar caché
-
-	for _, child in ipairs(ScrollFrame:GetChildren()) do
+local function LimpiarScroll(sf)
+	sf = sf or ActiveScroll
+	for _, child in ipairs(sf:GetChildren()) do
 		if child:GetAttribute("Entry") then
+			CleanupCard(child)
+			if child == ActiveCard then ActiveCard = nil end
 			child:Destroy()
 		end
 	end
+	CardCache = {}
 	MostrarEmptyMessage(false)
-	ActiveCard = nil
 end
 
 local function RestaurarBaileActivo()
-	UpdateCardCache() -- Actualizar caché después de cargar tarjetas
+	UpdateCardCache()
 	if not DanceActivated then return end
 
 	local card = CardCache[DanceActivated]
 	if card then
+		-- Limpiar efecto del frame anterior si cambió
+		if ActiveCard and ActiveCard.Parent and ActiveCard ~= card then
+			RemoverEfectoActivo(ActiveCard)
+		end
 		ActiveCard = card
 		AplicarEfectoActivo(card)
 	end
 end
 
 local function CargarPoses(filtro)
-	LimpiarScroll()
-
 	filtro = (filtro or ""):lower()
+	if PosesFilter == filtro then
+		RestaurarBaileActivo()
+		return
+	end
+	PosesFilter = filtro
+	LimpiarScroll(ScrollPoses)
+
 	local orden = 1
 	local hayVisibles = false
 
@@ -1170,7 +1263,7 @@ local function CargarPoses(filtro)
 
 	for _, v in ipairs(Modulo.Emotes or {}) do
 		if pasaFiltro(v.Nombre) then
-			CrearTarjeta(v.Nombre, v.ID, orden, true)
+			CrearTarjeta(v.Nombre, v.ID, orden, true, ScrollPoses)
 			orden = orden + 1
 			hayVisibles = true
 		end
@@ -1184,9 +1277,14 @@ local function CargarPoses(filtro)
 end
 
 local function CargarDances(filtro)
-	LimpiarScroll()
-
 	filtro = (filtro or ""):lower()
+	if DancesFilter == filtro then
+		RestaurarBaileActivo()
+		return
+	end
+	DancesFilter = filtro
+	LimpiarScroll(ScrollDances)
+
 	local orden = 1
 
 	local function pasaFiltro(nombre)
@@ -1196,7 +1294,7 @@ local function CargarDances(filtro)
 	-- LISTA COMPLETA
 	for _, v in ipairs(Modulo.Lista) do
 		if pasaFiltro(v.Nombre) then
-			CrearTarjeta(v.Nombre, v.ID, orden)
+			CrearTarjeta(v.Nombre, v.ID, orden, nil, ScrollDances)
 			orden = orden + 1
 		end
 	end
@@ -1205,7 +1303,7 @@ local function CargarDances(filtro)
 end
 
 local function CargarFavoritos(filtro)
-	LimpiarScroll()
+	LimpiarScroll(ScrollFavs)
 
 	if #EmotesFavs == 0 then
 		MostrarEmptyMessage(true, "Sin favoritos")
@@ -1219,7 +1317,7 @@ local function CargarFavoritos(filtro)
 	for _, id in ipairs(EmotesFavs) do
 		local nombre = EncontrarDatos(id)
 		if filtro == "" or nombre:lower():find(filtro, 1, true) then
-			CrearTarjeta(nombre, id, orden)
+			CrearTarjeta(nombre, id, orden, nil, ScrollFavs)
 			orden = orden + 1
 			hayVisibles = true
 		end
@@ -1237,7 +1335,8 @@ end
 -- ════════════════════════════════════════════════════════════════════════════════
 
 subTabs.onSwitch = function(tabId)
-	TabActual = tabId
+	ShowTab(tabId)    -- oculta tab anterior, muestra nueva (usa TabActual viejo)
+	TabActual = tabId -- actualizar DESPUÉS de ShowTab
 	local filtro = SearchBox and SearchBox.Text or ""
 	if tabId == "POSES" then
 		CargarPoses(filtro)

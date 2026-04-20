@@ -771,8 +771,15 @@ local function OnSyncAction(player, action, target)
 		local targetPlayer
 		if typeof(target) == "Instance" and target:IsA("Player") then
 			targetPlayer = target
+		elseif typeof(target) == "number" then
+			targetPlayer = Players:GetPlayerByUserId(target)
 		elseif typeof(target) == "string" then
-			targetPlayer = FindPlayerByName(target)
+			local asUserId = tonumber(target)
+			if asUserId then
+				targetPlayer = Players:GetPlayerByUserId(asUserId)
+			else
+				targetPlayer = FindPlayerByName(target)
+			end
 		end
 
 		if not targetPlayer or not IsValidPlayer(targetPlayer) then

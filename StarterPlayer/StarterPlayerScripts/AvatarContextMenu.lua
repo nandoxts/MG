@@ -53,55 +53,34 @@ if waitForCoreScript() then
 	local RemotesGlobal = ReplicatedStorage:WaitForChild("RemotesGlobal")
 	local EmotesSync = RemotesGlobal:WaitForChild("Emotes_Sync")
 	local SyncRemote = EmotesSync:WaitForChild("Sync")
-	local GetSyncState = EmotesSync:WaitForChild("GetSyncState")
-
-	-- NotificationSystem
-	local NotificationSystem
-	pcall(function()
-		NotificationSystem = require(
-			ReplicatedStorage:WaitForChild("Systems")
-				:WaitForChild("NotificationSystem")
-				:WaitForChild("NotificationSystem")
-		)
-	end)
 
 	-- Define functions
+	local function resolveContextTarget(rawTarget)
+		if typeof(rawTarget) == "Instance" and rawTarget:IsA("Player") then
+			return rawTarget
+		end
+
+		if typeof(rawTarget) == "number" then
+			return Players:GetPlayerByUserId(rawTarget) or rawTarget
+		end
+
+		if typeof(rawTarget) == "string" then
+			local asUserId = tonumber(rawTarget)
+			if asUserId then
+				return Players:GetPlayerByUserId(asUserId) or asUserId
+			end
+			return rawTarget
+		end
+
+		return rawTarget
+	end
+
 	local function sync(t)
-		-- Validación: no sincronizarse consigo mismo
-		if not t or t == player then
-			if NotificationSystem then
-				NotificationSystem:Warning("Sync", "No puedes sincronizarte contigo mismo", 3)
-			end
-			return
-		end
-
-		-- Consultar estado actual
-		local ok, syncInfo = pcall(function()
-			return GetSyncState:InvokeServer()
-		end)
-
-		if not ok then
-			if NotificationSystem then
-				NotificationSystem:Error("Sync", "Error al consultar sincronización", 3)
-			end
-			return
-		end
-
-		-- Si ya estoy sincronizado, desincronizar primero
-		if syncInfo and syncInfo.isSynced then
-			SyncRemote:FireServer("unsync")
-			task.wait(0.1)
-		end
-
-		-- Sincronizar con el nuevo jugador
-		SyncRemote:FireServer("sync", t)
+		SyncRemote:FireServer("sync", resolveContextTarget(t))
 	end
 
 	local function unsync()
 		SyncRemote:FireServer("unsync")
-		if NotificationSystem then
-			NotificationSystem:Info("Sync", "Has dejado de estar sincronizado", 4)
-		end
 	end
 
 	-- Connect events
