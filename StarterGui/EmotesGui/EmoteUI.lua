@@ -170,18 +170,22 @@ end
 
 local function AplicarEfectoActivo(card)
 	if not card or not card.Parent then return end
-	local border  = card:FindFirstChild("ActiveBorder")
-	local overlay = card:FindFirstChild("ActiveOverlay")
-	if border  then TrackTween(card, Tween(border,  0.12, {Transparency = 0, Thickness = 2}, Enum.EasingStyle.Quad)) end
-	if overlay then TrackTween(card, Tween(overlay, 0.12, {BackgroundTransparency = 0.8},    Enum.EasingStyle.Quad)) end
+	local border     = card:FindFirstChild("ActiveBorder")
+	local overlay    = card:FindFirstChild("ActiveOverlay")
+	local nameLabel  = card:FindFirstChild("NameLabel")
+	if border    then TrackTween(card, Tween(border,    0.12, {Transparency = 0, Thickness = 2},        Enum.EasingStyle.Quad)) end
+	if overlay   then TrackTween(card, Tween(overlay,   0.12, {BackgroundTransparency = 0.65},           Enum.EasingStyle.Quad)) end
+	if nameLabel then TrackTween(card, Tween(nameLabel, 0.12, {TextColor3 = THEME_CONFIG.accent},        Enum.EasingStyle.Quad)) end
 end
 
 local function RemoverEfectoActivo(card)
 	if not card or not card.Parent then return end
-	local border  = card:FindFirstChild("ActiveBorder")
-	local overlay = card:FindFirstChild("ActiveOverlay")
-	if border  then TrackTween(card, Tween(border,  0.08, {Transparency = 1, Thickness = 2}, Enum.EasingStyle.Quad)) end
-	if overlay then TrackTween(card, Tween(overlay, 0.08, {BackgroundTransparency = 1},       Enum.EasingStyle.Quad)) end
+	local border    = card:FindFirstChild("ActiveBorder")
+	local overlay   = card:FindFirstChild("ActiveOverlay")
+	local nameLabel = card:FindFirstChild("NameLabel")
+	if border    then TrackTween(card, Tween(border,    0.08, {Transparency = 1, Thickness = 2},   Enum.EasingStyle.Quad)) end
+	if overlay   then TrackTween(card, Tween(overlay,   0.08, {BackgroundTransparency = 1},         Enum.EasingStyle.Quad)) end
+	if nameLabel then TrackTween(card, Tween(nameLabel, 0.08, {TextColor3 = THEME_CONFIG.text},     Enum.EasingStyle.Quad)) end
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -715,17 +719,25 @@ end
 local function setActiveByName(nombre)
 	if not nombre then return end
 
-	local card = CardCache[nombre]
+	-- Buscar en el scroll visible primero para evitar aplicar el efecto en tab oculto
+	local card
+	for _, child in ipairs(ActiveScroll:GetChildren()) do
+		if child:GetAttribute("Name") == nombre then
+			card = child
+			break
+		end
+	end
 	if not card then
-		for _, sf in ipairs({ActiveScroll, ScrollPoses, ScrollDances, ScrollFavs}) do
-			for _, child in ipairs(sf:GetChildren()) do
-				if child:GetAttribute("Name") == nombre then
-					card = child
-					CardCache[nombre] = card
-					break
+		for _, sf in ipairs({ScrollPoses, ScrollDances, ScrollFavs}) do
+			if sf ~= ActiveScroll then
+				for _, child in ipairs(sf:GetChildren()) do
+					if child:GetAttribute("Name") == nombre then
+						card = child
+						break
+					end
 				end
+				if card then break end
 			end
-			if card then break end
 		end
 	end
 
@@ -733,8 +745,9 @@ local function setActiveByName(nombre)
 		if ActiveCard and ActiveCard.Parent and ActiveCard ~= card then
 			RemoverEfectoActivo(ActiveCard)
 		end
-		ActiveCard     = card
-		DanceActivated = nombre
+		ActiveCard          = card
+		DanceActivated      = nombre
+		CardCache[nombre]   = card
 		AplicarEfectoActivo(card)
 		ShowStopButton(true)
 	else
@@ -1045,9 +1058,11 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav, targetScroll)
 	local isProcessingClick = false
 
 	TrackConnection(card, card.MouseEnter:Connect(function()
+		if isDragging then return end
 		Tween(card, 0.07, {BackgroundColor3 = THEME_CONFIG.elevated}, Enum.EasingStyle.Quad)
 	end))
 	TrackConnection(card, card.MouseLeave:Connect(function()
+		if isDragging then return end
 		Tween(card, 0.07, {BackgroundColor3 = THEME_CONFIG.card}, Enum.EasingStyle.Quad)
 	end))
 
@@ -1069,6 +1084,11 @@ local function CrearTarjeta(nombre, id, orden, ocultarFav, targetScroll)
 		ToggleFavorite(id, nombre)
 	end))
 
+	if DanceActivated == nombre then
+		ActiveCard = card
+		AplicarEfectoActivo(card)
+	end
+
 	return card
 end
 
@@ -1084,83 +1104,63 @@ local function LimpiarScroll(sf)
 	for _, child in ipairs(sf:GetChildren()) do
 		if child:GetAttribute("Entry") then
 			CleanupCard(child)
-			if child == ActiveCard then ActiveCard = nil end
 			child:Destroy()
 		end
 	end
-	CardCache = {}
+	ActiveCard = nil  -- siempre reset; CrearTarjeta lo re-aplica vía DanceActivated
+	CardCache  = {}
 	MostrarEmptyMessage(false)
 end
 
 local function RestaurarBaileActivo()
 	UpdateCardCache()
-	if not DanceActivated then return end
-	local card
-	for _, child in ipairs(ActiveScroll:GetChildren()) do
-		if child:GetAttribute("Name") == DanceActivated then
-			card = child
-			break
-		end
-	end
-	if not card then card = CardCache[DanceActivated] end
-	if card then
-		if ActiveCard and ActiveCard.Parent and ActiveCard ~= card then
-			RemoverEfectoActivo(ActiveCard)
-		end
-		ActiveCard = card
-		AplicarEfectoActivo(card)
-	end
 end
 
-local function CargarPoses(filtro)
+local ScrollMap  = { POSES = ScrollPoses, DANCES = ScrollDances, FAVORITOS = ScrollFavs }
+local EmptyTexts = {
+	POSES     = "Sin poses aún",
+	DANCES    = "Sin bailes aún",
+	FAVORITOS = "Sin favoritos\nToca el ícono en cualquier baile",
+}
+
+local function CargarTab(tabId, filtro)
 	filtro = (filtro or ""):lower()
-	LimpiarScroll(ScrollPoses)
-	local orden, hayVisibles = 1, false
-	for _, v in ipairs(Modulo.Emotes or {}) do
-		if filtro == "" or v.Nombre:lower():find(filtro, 1, true) then
-			CrearTarjeta(v.Nombre, v.ID, orden, true, ScrollPoses)
-			orden = orden + 1
-			hayVisibles = true
-		end
-	end
-	if not hayVisibles then
-		MostrarEmptyMessage(true, filtro ~= "" and "Sin resultados" or "Sin poses aún")
-	end
-	RestaurarBaileActivo()
-end
+	local sf = ScrollMap[tabId]
 
-local function CargarDances(filtro)
-	filtro = (filtro or ""):lower()
-	LimpiarScroll(ScrollDances)
-	local orden = 1
-	for _, v in ipairs(Modulo.Lista) do
-		if filtro == "" or v.Nombre:lower():find(filtro, 1, true) then
-			CrearTarjeta(v.Nombre, v.ID, orden, nil, ScrollDances)
-			orden = orden + 1
-		end
-	end
-	RestaurarBaileActivo()
-end
+	LimpiarScroll(sf)
 
-local function CargarFavoritos(filtro)
-	LimpiarScroll(ScrollFavs)
-	if #EmotesFavs == 0 then
-		MostrarEmptyMessage(true, "Sin favoritos\nToca el ícono en cualquier baile")
+	if tabId == "FAVORITOS" and #EmotesFavs == 0 then
+		MostrarEmptyMessage(true, EmptyTexts.FAVORITOS)
 		return
 	end
-	filtro = (filtro or ""):lower()
+
+	local ocultarFav  = (tabId == "POSES")
 	local orden, hayVisibles = 1, false
-	for _, id in ipairs(EmotesFavs) do
-		local nombre = EncontrarDatos(id)
-		if filtro == "" or nombre:lower():find(filtro, 1, true) then
-			CrearTarjeta(nombre, id, orden, nil, ScrollFavs)
-			orden = orden + 1
-			hayVisibles = true
+
+	if tabId == "FAVORITOS" then
+		for _, id in ipairs(EmotesFavs) do
+			local nombre = EncontrarDatos(id)
+			if filtro == "" or nombre:lower():find(filtro, 1, true) then
+				CrearTarjeta(nombre, id, orden, ocultarFav, sf)
+				orden = orden + 1
+				hayVisibles = true
+			end
+		end
+	else
+		local lista = tabId == "POSES" and (Modulo.Emotes or {}) or Modulo.Lista
+		for _, v in ipairs(lista) do
+			if filtro == "" or v.Nombre:lower():find(filtro, 1, true) then
+				CrearTarjeta(v.Nombre, v.ID, orden, ocultarFav, sf)
+				orden = orden + 1
+				hayVisibles = true
+			end
 		end
 	end
+
 	if not hayVisibles then
-		MostrarEmptyMessage(true, "Sin resultados")
+		MostrarEmptyMessage(true, filtro ~= "" and "Sin resultados" or EmptyTexts[tabId])
 	end
+
 	RestaurarBaileActivo()
 end
 
@@ -1171,17 +1171,10 @@ end
 -- ════════════════════════════════════════════════════════════════════════════════
 
 subTabs.onSwitch = function(tabId)
-	local tabAnterior = TabActual   -- guardar ANTES de pisar
+	local tabAnterior = TabActual
 	TabActual = tabId
-	ShowTab(tabAnterior, tabId)     -- pasa el anterior para ocultarlo correctamente
-	local filtro = SearchBox and SearchBox.Text or ""
-	if tabId == "POSES" then
-		CargarPoses(filtro)
-	elseif tabId == "DANCES" then
-		CargarDances(filtro)
-	else
-		CargarFavoritos(filtro)
-	end
+	ShowTab(tabAnterior, tabId)
+	CargarTab(tabId, SearchBox and SearchBox.Text or "")
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -1194,13 +1187,7 @@ if SearchBox then
 		if searchDebounce then return end
 		searchDebounce = true
 		task.delay(0.25, function()
-			if TabActual == "POSES" then
-				CargarPoses(SearchBox.Text)
-			elseif TabActual == "DANCES" then
-				CargarDances(SearchBox.Text)
-			else
-				CargarFavoritos(SearchBox.Text)
-			end
+			CargarTab(TabActual, SearchBox.Text)
 			searchDebounce = false
 		end)
 	end))
@@ -1271,7 +1258,7 @@ end)
 
 local ok, favs = pcall(function() return ObtenerFavs:InvokeServer() end)
 EmotesFavs = (ok and favs) or {}
-CargarPoses()
+CargarTab("POSES")
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- GLOBAL
