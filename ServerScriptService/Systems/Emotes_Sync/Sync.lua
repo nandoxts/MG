@@ -733,7 +733,7 @@ local function OnPlayAnimation(player, action, animationData, speedParam)
 		end
 
 	elseif action == "setSpeed" and type(animationData) == "number" then
-		local speed = math.clamp(animationData, 0.1, 5.0)
+		local speed = math.clamp(animationData, 0.1, 3.0)
 		local data = PlayerData[player]
 		if data and data.Animation then
 			pcall(function() data.Animation:AdjustSpeed(speed) end)
