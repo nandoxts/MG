@@ -356,7 +356,7 @@ end
 -- DIMENSIONES ZONA INFERIOR
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local sliderH  = IsMobile and 44 or 66
+local sliderH  = IsMobile and 28 or 40
 local stopBtnH = IsMobile and 24 or 36
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -438,27 +438,20 @@ local ActiveEmpty  = EmptyPoses
 local StopButton = Instance.new("TextButton")
 StopButton.Name                   = "StopButton"
 StopButton.Size                   = UDim2.new(1, 0, 0, stopBtnH)
-StopButton.Position               = UDim2.new(0, 0, 1, -stopBtnH)
+StopButton.Position               = UDim2.new(0, 0, 1, 6)
 StopButton.BackgroundColor3       = THEME_CONFIG.card
 StopButton.BackgroundTransparency = 0
 StopButton.BorderSizePixel        = 0
-StopButton.Text                   = "■  DETENER"
+StopButton.Text                   = "DETENER"
 StopButton.Font                   = Enum.Font.GothamBold
-StopButton.TextSize               = IsMobile and 10 or 13
+StopButton.TextSize               = IsMobile and 12 or 15
 StopButton.TextColor3             = THEME_CONFIG.accent
 StopButton.AutoButtonColor        = false
 StopButton.ZIndex                 = 6
 StopButton.Visible                = false
-StopButton.Parent                 = ContentArea
-
-local StopSep = Instance.new("Frame")
-StopSep.Size                   = UDim2.new(1, 0, 0, 1)
-StopSep.Position               = UDim2.new(0, 0, 0, 0)
-StopSep.BackgroundColor3       = THEME_CONFIG.stroke
-StopSep.BackgroundTransparency = 0.4
-StopSep.BorderSizePixel        = 0
-StopSep.ZIndex                 = 7
-StopSep.Parent                 = StopButton
+StopButton.Parent                 = MainFrame
+CreateCorner(StopButton, IsMobile and 6 or 8)
+CreateStroke(StopButton, THEME_CONFIG.stroke, 1, 0.5)
 
 StopButton.MouseEnter:Connect(function()
 	Tween(StopButton, 0.07, {BackgroundColor3 = THEME_CONFIG.elevated, TextColor3 = THEME_CONFIG.text}, Enum.EasingStyle.Quad)
@@ -467,14 +460,8 @@ StopButton.MouseLeave:Connect(function()
 	Tween(StopButton, 0.07, {BackgroundColor3 = THEME_CONFIG.card, TextColor3 = THEME_CONFIG.accent}, Enum.EasingStyle.Quad)
 end)
 
--- FIX #1: ShowStopButton ahora está definida DESPUÉS de los ScrollFrames,
--- así ScrollPoses/ScrollDances/ScrollFavs ya existen y no son nil.
 local function ShowStopButton(show)
 	StopButton.Visible = show
-	local shrink = show and stopBtnH or 0
-	ScrollPoses.Size  = UDim2.new(1, 0, 1, -shrink)
-	ScrollDances.Size = UDim2.new(1, 0, 1, -shrink)
-	ScrollFavs.Size   = UDim2.new(1, 0, 1, -shrink)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -578,50 +565,16 @@ SpeedContainer.BorderSizePixel        = 0
 SpeedContainer.ZIndex                 = 5
 SpeedContainer.Parent                 = ContentCanvas
 
-local speedPadH  = IsMobile and 8 or 12
-local speedPadV  = IsMobile and 5 or 10
-local trackH_sz  = IsMobile and 6 or 10
-local thumbSz    = IsMobile and 16 or 26
-local headerH    = IsMobile and 14 or 20
-local trackAreaH = sliderH - 1 - headerH - speedPadV * 2
+local speedPadH = IsMobile and 8 or 12
+local trackH_sz = IsMobile and 6 or 10
+local thumbSz   = IsMobile and 20 or 30
 
-local SpeedLabelRow = Instance.new("Frame")
-SpeedLabelRow.Size                   = UDim2.new(1, -speedPadH * 2, 0, headerH)
-SpeedLabelRow.Position               = UDim2.new(0, speedPadH, 0, speedPadV)
-SpeedLabelRow.BackgroundTransparency = 1
-SpeedLabelRow.ZIndex                 = 6
-SpeedLabelRow.Parent                 = SpeedContainer
-
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Size                   = UDim2.new(0.5, 0, 1, 0)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text                   = "VELOCIDAD"
-SpeedLabel.TextColor3             = THEME_CONFIG.subtle
-SpeedLabel.TextSize               = IsMobile and 8 or 11
-SpeedLabel.Font                   = Enum.Font.GothamBold
-SpeedLabel.TextXAlignment         = Enum.TextXAlignment.Left
-SpeedLabel.ZIndex                 = 6
-SpeedLabel.Parent                 = SpeedLabelRow
-
-local SpeedValue = Instance.new("TextLabel")
-SpeedValue.Name                   = "SpeedValue"
-SpeedValue.Size                   = UDim2.new(0.5, 0, 1, 0)
-SpeedValue.Position               = UDim2.new(0.5, 0, 0, 0)
-SpeedValue.BackgroundTransparency = 1
-SpeedValue.Text                   = "1.0×"
-SpeedValue.TextColor3             = THEME_CONFIG.text
-SpeedValue.TextSize               = IsMobile and 8 or 11
-SpeedValue.Font                   = Enum.Font.GothamBold
-SpeedValue.TextXAlignment         = Enum.TextXAlignment.Right
-SpeedValue.ZIndex                 = 6
-SpeedValue.Parent                 = SpeedLabelRow
-
-local trackY = speedPadV + headerH + math.floor((trackAreaH - trackH_sz) / 2)
+local trackY = math.floor((sliderH - 1 - trackH_sz) / 2)
 
 local SliderTrack = Instance.new("Frame")
 SliderTrack.Name              = "SliderTrack"
-SliderTrack.Size              = UDim2.new(1, -speedPadH * 2, 0, trackH_sz)
-SliderTrack.Position          = UDim2.new(0, speedPadH, 0, trackY)
+SliderTrack.Size              = UDim2.new(1, -(speedPadH * 2 + thumbSz), 0, trackH_sz)
+SliderTrack.Position          = UDim2.new(0, speedPadH + thumbSz / 2, 0, trackY)
 SliderTrack.BackgroundColor3  = THEME_CONFIG.elevated
 SliderTrack.BackgroundTransparency = 0
 SliderTrack.BorderSizePixel   = 0
@@ -653,6 +606,19 @@ SliderThumb.Parent           = SliderTrack
 CreateCorner(SliderThumb, thumbSz / 2)
 CreateStroke(SliderThumb, THEME_CONFIG.bg, 2, 0)
 
+local ThumbLabel = Instance.new("TextLabel")
+ThumbLabel.Name                   = "ThumbLabel"
+ThumbLabel.Size                   = UDim2.new(1, 0, 1, 0)
+ThumbLabel.BackgroundTransparency = 1
+ThumbLabel.Font                   = Enum.Font.GothamBold
+ThumbLabel.Text                   = "1.0×"
+ThumbLabel.TextColor3             = THEME_CONFIG.bg
+ThumbLabel.TextSize               = IsMobile and 9 or 11
+ThumbLabel.TextXAlignment         = Enum.TextXAlignment.Center
+ThumbLabel.TextYAlignment         = Enum.TextYAlignment.Center
+ThumbLabel.ZIndex                 = 9
+ThumbLabel.Parent                 = SliderThumb
+
 local SliderHit = Instance.new("TextButton")
 SliderHit.Name                   = "SliderHit"
 SliderHit.Size                   = UDim2.new(1, 0, 1, 0)
@@ -668,7 +634,7 @@ local function UpdateSliderUI(spd)
 	SliderFill.Size      = UDim2.new(frac, 0, 1, 0)
 	SliderThumb.Position = UDim2.new(frac, 0, 0.5, 0)
 	local rounded = math.floor(spd * 10 + 0.5) / 10
-	SpeedValue.Text = tostring(rounded) .. "×"
+	ThumbLabel.Text = tostring(rounded) .. "×"
 end
 
 local function GetFrac(inputX)
@@ -1129,7 +1095,14 @@ end
 local function RestaurarBaileActivo()
 	UpdateCardCache()
 	if not DanceActivated then return end
-	local card = CardCache[DanceActivated]
+	local card
+	for _, child in ipairs(ActiveScroll:GetChildren()) do
+		if child:GetAttribute("Name") == DanceActivated then
+			card = child
+			break
+		end
+	end
+	if not card then card = CardCache[DanceActivated] end
 	if card then
 		if ActiveCard and ActiveCard.Parent and ActiveCard ~= card then
 			RemoverEfectoActivo(ActiveCard)
